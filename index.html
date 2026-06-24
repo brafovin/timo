@@ -3,1347 +3,955 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Michael Jackson – Das Leben einer Legende</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Lato:wght@300;400;700&display=swap" rel="stylesheet">
+<title>和の世界 - Wa no Sekai</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-:root{
-  --gold:#c9a227;--gold-light:#f5d06a;--gold-dark:#8b6914;
-  --bg:#080808;--bg2:#111;--bg3:#1a1a1a;
-  --text:#e8e8e8;--text2:#aaa;
-  --accent:#fff;
-}
-html{scroll-behavior:smooth}
-body{background:var(--bg);color:var(--text);font-family:'Lato',sans-serif;overflow-x:hidden}
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #000; overflow: hidden; font-family: 'Segoe UI', sans-serif; }
+  #canvas { display: block; width: 100vw; height: 100vh; }
 
-/* ── SCROLLBAR ── */
-::-webkit-scrollbar{width:6px}
-::-webkit-scrollbar-track{background:#111}
-::-webkit-scrollbar-thumb{background:var(--gold);border-radius:3px}
+  #crosshair {
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none; z-index: 10;
+  }
+  #crosshair::before, #crosshair::after {
+    content: ''; position: absolute; background: rgba(255,255,255,0.8);
+  }
+  #crosshair::before { width: 2px; height: 20px; top: -10px; left: -1px; }
+  #crosshair::after  { width: 20px; height: 2px; top: -1px; left: -10px; }
 
-/* ── NAV ── */
-nav{position:fixed;top:0;left:0;right:0;z-index:1000;background:rgba(8,8,8,.95);backdrop-filter:blur(10px);border-bottom:1px solid #222}
-.nav-inner{max-width:1400px;margin:0 auto;padding:0 20px;display:flex;align-items:center;justify-content:space-between;height:58px}
-.nav-logo{font-family:'Playfair Display',serif;font-size:1.1rem;color:var(--gold);font-weight:700;letter-spacing:2px;white-space:nowrap}
-.nav-links{display:flex;gap:0;overflow-x:auto;scrollbar-width:none}
-.nav-links::-webkit-scrollbar{display:none}
-.nav-links a{color:var(--text2);text-decoration:none;font-size:.72rem;font-weight:700;letter-spacing:1.5px;text-transform:uppercase;padding:8px 12px;white-space:nowrap;transition:color .3s;border-bottom:2px solid transparent}
-.nav-links a:hover,.nav-links a.active{color:var(--gold);border-bottom-color:var(--gold)}
+  #hud {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    display: flex; flex-direction: column; align-items: center;
+    padding-bottom: 12px; z-index: 10; pointer-events: none;
+  }
+  #hotbar {
+    display: flex; gap: 4px;
+    background: rgba(0,0,0,0.5); border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 4px; padding: 4px;
+  }
+  .slot {
+    width: 48px; height: 48px; border: 2px solid rgba(255,255,255,0.2);
+    border-radius: 3px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; position: relative;
+    background: rgba(0,0,0,0.4); cursor: pointer; pointer-events: all;
+  }
+  .slot.active { border-color: #fff; box-shadow: 0 0 8px rgba(255,255,255,0.6); }
+  .slot-icon { width: 32px; height: 32px; border-radius: 2px; }
+  .slot-num {
+    position: absolute; top: 1px; left: 3px;
+    color: rgba(255,255,255,0.6); font-size: 9px;
+  }
+  .slot-name {
+    position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%);
+    color: #fff; font-size: 10px; white-space: nowrap;
+    background: rgba(0,0,0,0.7); padding: 2px 4px; border-radius: 2px;
+    opacity: 0; transition: opacity 0.2s;
+  }
+  .slot:hover .slot-name { opacity: 1; }
 
-/* ── HERO ── */
-#hero{height:100vh;display:flex;align-items:center;justify-content:center;text-align:center;position:relative;overflow:hidden;background:radial-gradient(ellipse at center,#1a1000 0%,#080808 70%)}
-.stars{position:absolute;inset:0;pointer-events:none}
-.star{position:absolute;border-radius:50%;background:#fff;animation:twinkle var(--d,2s) ease-in-out infinite alternate}
-@keyframes twinkle{from{opacity:.2;transform:scale(1)}to{opacity:1;transform:scale(1.3)}}
-.hero-content{position:relative;z-index:1}
-.hero-subtitle{font-size:.85rem;letter-spacing:6px;color:var(--gold);text-transform:uppercase;margin-bottom:20px}
-.hero-title{font-family:'Playfair Display',serif;font-size:clamp(3rem,8vw,7rem);font-weight:900;line-height:1;color:#fff;text-shadow:0 0 60px rgba(201,162,39,.4)}
-.hero-title span{color:var(--gold);display:block}
-.hero-dates{font-size:.9rem;letter-spacing:4px;color:var(--text2);margin-top:20px}
-.hero-crown{font-size:3rem;margin-bottom:10px;filter:drop-shadow(0 0 20px gold)}
-.scroll-hint{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);color:var(--text2);font-size:.75rem;letter-spacing:3px;text-transform:uppercase;animation:bounce 2s ease-in-out infinite}
-@keyframes bounce{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(8px)}}
+  #info {
+    position: fixed; top: 10px; left: 10px;
+    color: #fff; font-size: 12px; z-index: 10;
+    background: rgba(0,0,0,0.4); padding: 8px 12px; border-radius: 4px;
+    line-height: 1.6;
+  }
 
-/* ── SECTION WRAPPER ── */
-.era-section{padding:80px 0;position:relative}
-.era-section:nth-child(even){background:var(--bg2)}
-.era-section:nth-child(odd){background:var(--bg)}
-.section-inner{max-width:1200px;margin:0 auto;padding:0 30px}
+  #overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 100; color: #fff;
+  }
+  #overlay h1 {
+    font-size: 48px; margin-bottom: 8px;
+    color: #ff6b6b; text-shadow: 0 0 20px #ff6b6b;
+  }
+  #overlay h2 { font-size: 20px; color: #ffcc66; margin-bottom: 30px; }
+  #overlay .subtitle { font-size: 14px; color: #aaa; margin-bottom: 40px; text-align: center; line-height: 1.8; }
+  #overlay button {
+    background: #c0392b; border: none; color: #fff;
+    padding: 14px 40px; font-size: 18px; border-radius: 4px;
+    cursor: pointer; transition: background 0.2s;
+    box-shadow: 0 4px 15px rgba(192,57,43,0.5);
+  }
+  #overlay button:hover { background: #e74c3c; }
 
-/* ── ERA HEADER ── */
-.era-header{display:flex;align-items:center;gap:20px;margin-bottom:50px}
-.era-year{font-family:'Playfair Display',serif;font-size:clamp(3rem,6vw,5rem);font-weight:900;color:var(--gold);line-height:1;min-width:max-content}
-.era-divider{flex:1;height:1px;background:linear-gradient(to right,var(--gold),transparent)}
-.era-badge{background:var(--gold);color:#000;font-size:.7rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;padding:5px 14px;border-radius:20px;white-space:nowrap}
+  #pause {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    display: none; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 50; color: #fff;
+  }
+  #pause h2 { font-size: 32px; margin-bottom: 20px; color: #ffcc66; }
+  #pause p { color: #aaa; font-size: 14px; }
 
-/* ── GRID ── */
-.era-grid{display:grid;grid-template-columns:300px 1fr;gap:40px;align-items:start}
-.era-grid.reverse{grid-template-columns:1fr 300px}
-.era-grid.reverse .era-image{order:2}
-.era-grid.reverse .era-content{order:1}
-@media(max-width:768px){.era-grid,.era-grid.reverse{grid-template-columns:1fr}}
+  #block-info {
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+    color: #fff; font-size: 13px; background: rgba(0,0,0,0.6);
+    padding: 4px 12px; border-radius: 4px; z-index: 10;
+    pointer-events: none; opacity: 0; transition: opacity 0.3s;
+  }
 
-/* ── IMAGE ── */
-.era-image{position:sticky;top:80px}
-.img-frame{border-radius:12px;overflow:hidden;border:2px solid var(--gold-dark);box-shadow:0 0 40px rgba(201,162,39,.2);aspect-ratio:3/4;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px}
-.img-frame img{width:100%;height:100%;object-fit:cover;display:block}
-.img-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px}
-.img-icon{font-size:4rem;filter:grayscale(1) opacity(.5)}
-.img-caption{font-size:.7rem;letter-spacing:2px;text-transform:uppercase;color:var(--gold);line-height:1.5}
-
-/* ── CONTENT ── */
-.era-content h2{font-family:'Playfair Display',serif;font-size:clamp(1.5rem,3vw,2.2rem);color:#fff;margin-bottom:15px;line-height:1.2}
-.era-content .lead{font-size:1.05rem;line-height:1.8;color:var(--text);margin-bottom:25px}
-.era-content p{font-size:.92rem;line-height:1.85;color:var(--text2);margin-bottom:14px}
-
-/* ── EVENTS ── */
-.events-list{list-style:none;margin:20px 0}
-.events-list li{display:flex;gap:12px;padding:10px 0;border-bottom:1px solid #222;font-size:.88rem;color:var(--text2)}
-.events-list li:last-child{border-bottom:none}
-.event-year{color:var(--gold);font-weight:700;min-width:42px;font-family:'Playfair Display',serif}
-.event-dot{width:8px;height:8px;border-radius:50%;background:var(--gold);margin-top:5px;flex-shrink:0}
-
-/* ── ALBUM CARDS ── */
-.albums-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:20px;margin-top:20px}
-.album-card{background:var(--bg3);border:1px solid #2a2a2a;border-radius:10px;overflow:hidden;transition:transform .3s,border-color .3s}
-.album-card:hover{transform:translateY(-4px);border-color:var(--gold)}
-.album-cover{height:160px;display:flex;align-items:center;justify-content:center;font-size:3.5rem;position:relative;overflow:hidden}
-.album-info{padding:15px}
-.album-title{font-family:'Playfair Display',serif;font-size:1rem;color:#fff;margin-bottom:4px}
-.album-year-tag{font-size:.72rem;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px}
-.album-songs{list-style:none}
-.album-songs li{font-size:.78rem;color:var(--text2);padding:3px 0;border-bottom:1px solid #222;display:flex;align-items:center;gap:6px}
-.album-songs li:last-child{border-bottom:none}
-.album-songs li::before{content:"♪";color:var(--gold);font-size:.7rem}
-.hit-badge{background:var(--gold);color:#000;font-size:.58rem;font-weight:700;padding:1px 5px;border-radius:3px;text-transform:uppercase;margin-left:auto}
-
-/* ── AWARDS ── */
-.awards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:15px;margin-top:20px}
-.award-card{background:linear-gradient(135deg,#1a1400,#0d0d0d);border:1px solid var(--gold-dark);border-radius:8px;padding:16px;display:flex;gap:12px;align-items:start}
-.award-icon{font-size:1.8rem;flex-shrink:0}
-.award-text{font-size:.8rem;color:var(--text2);line-height:1.5}
-.award-text strong{color:var(--gold);display:block;margin-bottom:3px;font-size:.82rem}
-
-/* ── TOUR CARDS ── */
-.tour-card{background:var(--bg3);border-left:3px solid var(--gold);padding:16px 20px;border-radius:0 8px 8px 0;margin-bottom:12px}
-.tour-name{font-family:'Playfair Display',serif;font-size:1rem;color:#fff;margin-bottom:5px}
-.tour-meta{font-size:.78rem;color:var(--text2);line-height:1.6}
-.tour-stat{display:inline-block;background:#222;border-radius:4px;padding:2px 8px;font-size:.72rem;color:var(--gold);margin:3px 3px 0 0}
-
-/* ── TAG PILLS ── */
-.tags{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
-.tag{background:#1a1a1a;border:1px solid #333;border-radius:20px;padding:4px 12px;font-size:.75rem;color:var(--text2);transition:border-color .3s}
-.tag:hover{border-color:var(--gold);color:var(--gold)}
-.tag.gold{border-color:var(--gold-dark);color:var(--gold)}
-
-/* ── SECTION TITLE ── */
-.sec-title{font-family:'Playfair Display',serif;font-size:1rem;color:var(--gold);letter-spacing:3px;text-transform:uppercase;margin:30px 0 15px;display:flex;align-items:center;gap:12px}
-.sec-title::after{content:'';flex:1;height:1px;background:linear-gradient(to right,var(--gold-dark),transparent)}
-
-/* ── BOTSCHAFT ── */
-#botschaft{padding:100px 0;background:linear-gradient(180deg,#080808,#0d0800,#080808)}
-.botschaft-inner{max-width:900px;margin:0 auto;padding:0 30px;text-align:center}
-.botschaft-label{font-size:.8rem;letter-spacing:5px;text-transform:uppercase;color:var(--gold);margin-bottom:20px}
-.botschaft-title{font-family:'Playfair Display',serif;font-size:clamp(2rem,5vw,3.5rem);color:#fff;margin-bottom:50px;line-height:1.2}
-.message-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:25px;text-align:left;margin-top:40px}
-.message-card{background:var(--bg3);border:1px solid #222;border-radius:12px;padding:24px;position:relative;overflow:hidden;transition:border-color .3s}
-.message-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(to right,var(--gold),var(--gold-light))}
-.message-card:hover{border-color:var(--gold)}
-.message-song{font-size:.72rem;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:8px}
-.message-title{font-family:'Playfair Display',serif;font-size:1.1rem;color:#fff;margin-bottom:10px}
-.message-text{font-size:.85rem;color:var(--text2);line-height:1.7}
-
-/* ── CLOSING ── */
-#abschluss{padding:120px 0;text-align:center;background:var(--bg);position:relative;overflow:hidden}
-#abschluss::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at center,rgba(201,162,39,.08) 0%,transparent 70%)}
-.closing-inner{max-width:800px;margin:0 auto;padding:0 30px;position:relative;z-index:1}
-.closing-icon{font-size:4rem;margin-bottom:30px;filter:drop-shadow(0 0 30px gold)}
-.closing-quote{font-family:'Playfair Display',serif;font-size:clamp(1.3rem,3vw,2rem);color:#fff;line-height:1.6;font-style:italic;margin-bottom:30px}
-.closing-line{width:60px;height:2px;background:var(--gold);margin:0 auto 30px}
-.closing-dates{font-size:.85rem;letter-spacing:4px;color:var(--gold);text-transform:uppercase}
-
-/* ── TIMELINE LINE ── */
-.timeline-accent{position:absolute;left:50%;transform:translateX(-50%);width:2px;height:100%;background:linear-gradient(to bottom,transparent,var(--gold-dark),transparent);pointer-events:none;opacity:.2}
-
-/* ── GRADIENTS PER ERA ── */
-.era-1958 .img-frame{background:linear-gradient(135deg,#1a0a00,#2a1500)}
-.era-1964 .img-frame{background:linear-gradient(135deg,#001a0a,#001505)}
-.era-1969 .img-frame{background:linear-gradient(135deg,#1a0020,#0d0015)}
-.era-1975 .img-frame{background:linear-gradient(135deg,#001520,#000d1a)}
-.era-1979 .img-frame{background:linear-gradient(135deg,#1a1000,#0d0800)}
-.era-1982 .img-frame{background:linear-gradient(135deg,#200010,#150008)}
-.era-1985 .img-frame{background:linear-gradient(135deg,#001a15,#000d0a)}
-.era-1987 .img-frame{background:linear-gradient(135deg,#15001a,#0a0010)}
-.era-1991 .img-frame{background:linear-gradient(135deg,#001a1a,#000d0d)}
-.era-1993 .img-frame{background:linear-gradient(135deg,#1a0000,#0d0000)}
-.era-1995 .img-frame{background:linear-gradient(135deg,#0a1a00,#050d00)}
-.era-2001 .img-frame{background:linear-gradient(135deg,#1a0a10,#0d0508)}
-.era-2009 .img-frame{background:linear-gradient(135deg,#0a0a1a,#050508)}
-
-/* ── RESPONSIVE ── */
-@media(max-width:600px){.nav-inner{flex-direction:column;height:auto;padding:10px}.nav-logo{padding:8px 0}.nav-links{width:100%;padding-bottom:8px}}
-
-/* ── HIGHLIGHT BOX ── */
-.highlight-box{background:linear-gradient(135deg,#1a1000,#0d0800);border:1px solid var(--gold-dark);border-radius:8px;padding:16px 20px;margin:15px 0;font-size:.88rem;color:var(--text2);line-height:1.7}
-.highlight-box strong{color:var(--gold)}
-.incident-box{background:linear-gradient(135deg,#1a0000,#0d0000);border:1px solid #4a0000;border-radius:8px;padding:16px 20px;margin:15px 0;font-size:.88rem;color:var(--text2);line-height:1.7}
-.incident-box strong{color:#e05050}
-
-/* ── STAT ROW ── */
-.stats-row{display:flex;flex-wrap:wrap;gap:15px;margin:20px 0}
-.stat-box{background:var(--bg3);border:1px solid #2a2a2a;border-radius:8px;padding:14px 20px;text-align:center;flex:1;min-width:100px}
-.stat-number{font-family:'Playfair Display',serif;font-size:1.8rem;color:var(--gold);font-weight:700}
-.stat-label{font-size:.7rem;color:var(--text2);letter-spacing:1px;text-transform:uppercase;margin-top:4px}
+  canvas { cursor: none; }
 </style>
 </head>
 <body>
 
-<!-- NAV -->
-<nav>
-<div class="nav-inner">
-  <div class="nav-logo">♛ MJ LEGENDE</div>
-  <div class="nav-links">
-    <a href="#hero">Start</a>
-    <a href="#s1958">1958</a>
-    <a href="#s1964">1964</a>
-    <a href="#s1969">1969</a>
-    <a href="#s1975">1975</a>
-    <a href="#s1979">1979</a>
-    <a href="#s1982">1982</a>
-    <a href="#s1985">1985</a>
-    <a href="#s1987">1987</a>
-    <a href="#s1991">1991</a>
-    <a href="#s1993">1993</a>
-    <a href="#s1995">1995</a>
-    <a href="#s2001">2001</a>
-    <a href="#s2009">2009</a>
-    <a href="#botschaft">Botschaft</a>
-    <a href="#abschluss">Abschluss</a>
+<div id="overlay">
+  <h1>和の世界</h1>
+  <h2>Wa no Sekai — Die Welt der Harmonie</h2>
+  <div class="subtitle">
+    Ein japanisches Voxel-Abenteuer<br>
+    Erkunde Bambushaine, Kirschblütenwälder und alte Tempel<br><br>
+    <b style="color:#ffcc66">WASD</b> Bewegen &nbsp;|&nbsp;
+    <b style="color:#ffcc66">Maus</b> Umsehen &nbsp;|&nbsp;
+    <b style="color:#ffcc66">Leertaste</b> Springen<br>
+    <b style="color:#ffcc66">Linksklick</b> Block abbauen &nbsp;|&nbsp;
+    <b style="color:#ffcc66">Rechtsklick</b> Block setzen<br>
+    <b style="color:#ffcc66">1–9</b> Inventar &nbsp;|&nbsp;
+    <b style="color:#ffcc66">Shift</b> Rennen &nbsp;|&nbsp;
+    <b style="color:#ffcc66">ESC</b> Pause
   </div>
+  <button id="startBtn">Spiel starten</button>
 </div>
-</nav>
 
-<!-- HERO -->
-<section id="hero">
-  <div class="stars" id="stars"></div>
-  <div class="hero-content">
-    <div class="hero-crown">♛</div>
-    <div class="hero-subtitle">Das Leben einer Legende</div>
-    <h1 class="hero-title">Michael<span>Jackson</span></h1>
-    <div class="hero-dates">29. August 1958 &nbsp;–&nbsp; 25. Juni 2009</div>
-  </div>
-  <div class="scroll-hint">▼ &nbsp; Entdecke sein Leben</div>
-</section>
-
-<!-- ════════════════════════════════════════ -->
-<!-- ERA 1958 -->
-<!-- ════════════════════════════════════════ -->
-<section class="era-section era-1958" id="s1958">
-<div class="section-inner">
-  <div class="era-header">
-    <div class="era-year">1958</div>
-    <div class="era-divider"></div>
-    <div class="era-badge">Die Geburt einer Legende</div>
-  </div>
-  <div class="era-grid">
-    <div class="era-image">
-      <div class="img-frame">
-        <div class="img-placeholder">
-          <div class="img-icon">👶</div>
-          <div class="img-caption">Michael Jackson<br>Gary, Indiana<br>ca. 1960</div>
-        </div>
-      </div>
-    </div>
-    <div class="era-content">
-      <h2>Kindheit in Gary, Indiana</h2>
-      <p class="lead">Am 29. August 1958 erblickte Michael Joseph Jackson in Gary, Indiana, das Licht der Welt – als siebtes von neun Kindern der Familie Jackson.</p>
-      <p>Sein Vater Joseph Walter Jackson war Stahlarbeiter und Hobbymusiker, seine Mutter Katherine Esther Scruse eine devote Zeugin Jehovas. Die Familie lebte in einem kleinen Häuschen mit nur zwei Schlafzimmern in der Clarendon Ave 2300 – beengt, aber voller Musik.</p>
-      <p>Joseph Jackson erkannte früh das außergewöhnliche Talent seiner Kinder und begann, sie zu fördern – oft mit eiserner Hand. Berichte über harte Disziplin und körperliche Züchtigungen prägten Michaels Kindheitserinnerungen ein Leben lang.</p>
-
-      <div class="sec-title">Familie</div>
-      <ul class="events-list">
-        <li><span class="event-year">Vater</span><span class="event-dot"></span>Joseph Jackson – streng, ehrgeizig, Manager</li>
-        <li><span class="event-year">Mutter</span><span class="event-dot"></span>Katherine Jackson – liebevoll, musikalisch begabt</li>
-        <li><span class="event-year">Geschwister</span><span class="event-dot"></span>Jackie, Tito, Jermaine, Marlon, Randy, Rebbie, La Toya, Janet</li>
-        <li><span class="event-year">1963</span><span class="event-dot"></span>Michael singt erstmals öffentlich in der Schule</li>
-        <li><span class="event-year">1964</span><span class="event-dot"></span>Eintritt in die Band seiner Brüder mit nur 6 Jahren</li>
-      </ul>
-
-      <div class="highlight-box">
-        <strong>Musikalisches Wunderkind:</strong> Schon als Kleinkind ahmte Michael die Tanzschritte seiner Brüder nach und überraschte die Familie mit seiner natürlichen Bühnenpräsenz. Sein Vater Joseph sagte später, er habe sofort gewusst, dass dieser Sohn etwas Besonderes war.
-      </div>
-
-      <div class="stats-row">
-        <div class="stat-box"><div class="stat-number">9</div><div class="stat-label">Kinder in der Familie</div></div>
-        <div class="stat-box"><div class="stat-number">6</div><div class="stat-label">Jahre alt bei erster Bühne</div></div>
-        <div class="stat-box"><div class="stat-number">1958</div><div class="stat-label">Geburtsjahr</div></div>
-      </div>
-    </div>
-  </div>
+<div id="pause">
+  <h2>Pause</h2>
+  <p>Drucke ESC um fortzufahren</p>
 </div>
-</section>
 
-<!-- ERA 1964 -->
-<section class="era-section era-1964" id="s1964">
-<div class="section-inner">
-  <div class="era-header">
-    <div class="era-year">1964–68</div>
-    <div class="era-divider"></div>
-    <div class="era-badge">The Jackson Brothers</div>
-  </div>
-  <div class="era-grid reverse">
-    <div class="era-image">
-      <div class="img-frame">
-        <div class="img-placeholder">
-          <div class="img-icon">🎤</div>
-          <div class="img-caption">Die Jackson Brothers<br>Frühe Auftritte<br>ca. 1966</div>
-        </div>
-      </div>
-    </div>
-    <div class="era-content">
-      <h2>Die ersten Schritte auf der Bühne</h2>
-      <p class="lead">Aus den Jackson Brothers werden die Jackson 5 – und ein kleiner Junge mit Riesenstimme stehlt allen die Show.</p>
-      <p>1964 gründeten die Brüder Jackie, Tito und Jermaine eine Band. Als Michael mit sechs Jahren dazukam, und kurz darauf Marlon, entstand das legendäre Quintett. Vater Joseph wurde ihr Manager und trainierte sie täglich nach der Schule in der kleinen Garage.</p>
-      <p>Die Gruppe trat bei lokalen Clubs, Schulveranstaltungen und Talentwettbewerben auf. Schon bald gewannen sie regelmäßig, und Michaels Bühnenpräsenz war bereits in diesem Alter atemberaubend.</p>
-
-      <ul class="events-list">
-        <li><span class="event-year">1964</span><span class="event-dot"></span>Michael tritt der Gruppe seiner Brüder bei</li>
-        <li><span class="event-year">1965</span><span class="event-dot"></span>Erster Sieg beim Schultalentwettbewerb</li>
-        <li><span class="event-year">1966</span><span class="event-dot"></span>Regelmäßige Auftritte in Clubs in Gary & Chicago</li>
-        <li><span class="event-year">1967</span><span class="event-dot"></span>Sieg beim Amateur-Nite-Wettbewerb im Apollo Theater, NYC</li>
-        <li><span class="event-year">1968</span><span class="event-dot"></span>Entdeckt von Bobby Taylor (The Vancouvers) und Gladys Knight</li>
-      </ul>
-
-      <div class="highlight-box">
-        <strong>Apollo Theater (1967):</strong> Der Auftritt der Jackson Brothers beim Amateur-Night-Wettbewerb im berühmten Apollo Theater in Harlem war ein Wendepunkt. Das Publikum tobte – der Grundstein für einen Vertrag mit Motown war gelegt.
-      </div>
-
-      <div class="tags">
-        <span class="tag gold">Gary, Indiana</span>
-        <span class="tag">Lokale Clubs</span>
-        <span class="tag">Apollo Theater 1967</span>
-        <span class="tag">Vater als Manager</span>
-      </div>
-    </div>
-  </div>
+<div id="crosshair"></div>
+<div id="hud">
+  <div id="hotbar"></div>
 </div>
-</section>
-
-<!-- ERA 1969 -->
-<section class="era-section era-1969" id="s1969">
-<div class="section-inner">
-  <div class="era-header">
-    <div class="era-year">1969–75</div>
-    <div class="era-divider"></div>
-    <div class="era-badge">Motown & Weltberühmtheit</div>
-  </div>
-  <div class="era-grid">
-    <div class="era-image">
-      <div class="img-frame">
-        <div class="img-placeholder">
-          <div class="img-icon">🎵</div>
-          <div class="img-caption">Jackson 5<br>Motown Records<br>ca. 1970 (Michael: 11)</div>
-        </div>
-      </div>
-    </div>
-    <div class="era-content">
-      <h2>Jackson 5 bei Motown – Der Durchbruch</h2>
-      <p class="lead">1969 unterzeichneten die Jackson 5 bei Motown Records einen Vertrag. Was folgte, war eine der rasantesten Karrierestarts der Musikgeschichte.</p>
-      <p>Diana Ross persönlich präsentierte die Jackson 5 der Welt – ein Marketingtrick von Motown. Mit der Single <em>"I Want You Back"</em> stürmten sie auf Platz 1 der Billboard Charts und setzten damit den Beginn einer außergewöhnlichen Serie von Hits.</p>
-
-      <div class="sec-title">Alben dieser Ära</div>
-      <div class="albums-grid">
-        <div class="album-card">
-          <div class="album-cover" style="background:linear-gradient(135deg,#2d1b69,#1a0a3d)">🎶</div>
-          <div class="album-info">
-            <div class="album-title">Diana Ross Presents the Jackson 5</div>
-            <div class="album-year-tag">Dezember 1969</div>
-            <ul class="album-songs">
-              <li>I Want You Back <span class="hit-badge">HIT #1</span></li>
-              <li>Who's Lovin' You</li>
-              <li>Can You Remember</li>
-              <li>Standing in the Shadows of Love</li>
-              <li>You've Changed</li>
-            </ul>
-          </div>
-        </div>
-        <div class="album-card">
-          <div class="album-cover" style="background:linear-gradient(135deg,#6b2d00,#3d1a00)">🎵</div>
-          <div class="album-info">
-            <div class="album-title">ABC</div>
-            <div class="album-year-tag">Mai 1970</div>
-            <ul class="album-songs">
-              <li>ABC <span class="hit-badge">HIT #1</span></li>
-              <li>The Love You Save <span class="hit-badge">HIT #1</span></li>
-              <li>2-4-6-8</li>
-              <li>La La (Means I Love You)</li>
-              <li>I Found That Girl</li>
-            </ul>
-          </div>
-        </div>
-        <div class="album-card">
-          <div class="album-cover" style="background:linear-gradient(135deg,#006b2d,#003d1a)">🎤</div>
-          <div class="album-info">
-            <div class="album-title">Third Album</div>
-            <div class="album-year-tag">September 1970</div>
-            <ul class="album-songs">
-              <li>I'll Be There <span class="hit-badge">HIT #1</span></li>
-              <li>Mama's Pearl <span class="hit-badge">HIT #2</span></li>
-              <li>Reach In</li>
-              <li>The Love I Saw in You</li>
-              <li>How Funky Is Your Chicken</li>
-            </ul>
-          </div>
-        </div>
-        <div class="album-card">
-          <div class="album-cover" style="background:linear-gradient(135deg,#6b006b,#3d003d)">🌟</div>
-          <div class="album-info">
-            <div class="album-title">Maybe Tomorrow</div>
-            <div class="album-year-tag">April 1971</div>
-            <ul class="album-songs">
-              <li>Never Can Say Goodbye <span class="hit-badge">HIT #2</span></li>
-              <li>Maybe Tomorrow</li>
-              <li>She's Good</li>
-              <li>Give Love on Christmas Day</li>
-            </ul>
-          </div>
-        </div>
-        <div class="album-card">
-          <div class="album-cover" style="background:linear-gradient(135deg,#006b5a,#003d33)">💫</div>
-          <div class="album-info">
-            <div class="album-title">Lookin' Through the Windows</div>
-            <div class="album-year-tag">Mai 1972</div>
-            <ul class="album-songs">
-              <li>Lookin' Through the Windows</li>
-              <li>Little Bitty Pretty One</li>
-              <li>E-Ne-Me-Ne-Mi-Ne-Moe</li>
-              <li>Don't Let Your Baby Catch You</li>
-            </ul>
-          </div>
-        </div>
-        <div class="album-card">
-          <div class="album-cover" style="background:linear-gradient(135deg,#6b4400,#3d2600)">🕺</div>
-          <div class="album-info">
-            <div class="album-title">Dancing Machine</div>
-            <div class="album-year-tag">September 1974</div>
-            <ul class="album-songs">
-              <li>Dancing Machine <span class="hit-badge">HIT #2</span></li>
-              <li>Whatever You Got, I Want</li>
-              <li>The Life of the Party</li>
-              <li>What You Don't Know</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div class="sec-title">Michaels erste Solo-Alben bei Motown</div>
-      <div class="albums-grid">
-        <div class="album-card">
-          <div class="album-cover" style="background:linear-gradient(135deg,#1a4d2e,#0d2619)">🌿</div>
-          <div class="album-info">
-            <div class="album-title">Got to Be There</div>
-            <div class="album-year-tag">Januar 1972 (Solo-Debut)</div>
-            <ul class="album-songs">
-              <li>Got to Be There <span class="hit-badge">HIT #4</span></li>
-              <li>Rockin' Robin <span class="hit-badge">HIT #2</span></li>
-              <li>Ain't No Sunshine</li>
-              <li>I Wanna Be Where You Are</li>
-              <li>Maria (You Were the Only One)</li>
-            </ul>
-          </div>
-        </div>
-        <div class="album-card">
-          <div class="album-cover" style="background:linear-gradient(135deg,#4d1a1a,#260d0d)">🐀</div>
-          <div class="album-info">
-            <div class="album-title">Ben</div>
-            <div class="album-year-tag">August 1972</div>
-            <ul class="album-songs">
-              <li>Ben <span class="hit-badge">HIT #1</span></li>
-              <li>Everybody's Somebody's Fool</li>
-              <li>My Girl</li>
-              <li>In Our Small Way</li>
-              <li>Greatest Show on Earth</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div class="sec-title">Schlüsselereignisse</div>
-      <ul class="events-list">
-        <li><span class="event-year">1969</span><span class="event-dot"></span>Motown-Vertrag – "I Want You Back" erreicht Platz #1</li>
-        <li><span class="event-year">1970</span><span class="event-dot"></span>Vier Nummer-1-Singles in Folge aus dem Debütalbum</li>
-        <li><span class="event-year">1971</span><span class="event-dot"></span>Solo-Debut: "Got to Be There" – Michael ist 13 Jahre alt</li>
-        <li><span class="event-year">1972</span><span class="event-dot"></span>"Ben" erreicht Platz #1 – Titelsong des gleichnamigen Films</li>
-        <li><span class="event-year">1972</span><span class="event-dot"></span>Erste Welttournee mit Jackson 5</li>
-        <li><span class="event-year">1973</span><span class="event-dot"></span>Motown-Streitigkeiten beginnen – kreative Unfreiheit</li>
-        <li><span class="event-year">1975</span><span class="event-dot"></span>Wechsel zu Epic Records</li>
-      </ul>
-
-      <div class="stats-row">
-        <div class="stat-box"><div class="stat-number">4</div><div class="stat-label">Nr.1-Singles in Folge (1970)</div></div>
-        <div class="stat-box"><div class="stat-number">13</div><div class="stat-label">Jahre bei Solo-Debut</div></div>
-        <div class="stat-box"><div class="stat-number">6</div><div class="stat-label">Alben bei Motown (J5)</div></div>
-      </div>
-    </div>
-  </div>
+<div id="info">
+  <div id="pos">Position: 0, 0, 0</div>
+  <div id="fps">FPS: 0</div>
+  <div id="selected-block">Block: Gras</div>
 </div>
-</section>
+<div id="block-info"></div>
 
-<!-- ERA 1975 -->
-<section class="era-section era-1975" id="s1975">
-<div class="section-inner">
-  <div class="era-header">
-    <div class="era-year">1975–78</div>
-    <div class="era-divider"></div>
-    <div class="era-badge">Epic Records & The Wiz</div>
-  </div>
-  <div class="era-grid reverse">
-    <div class="era-image">
-      <div class="img-frame">
-        <div class="img-placeholder">
-          <div class="img-icon">🎬</div>
-          <div class="img-caption">The Wiz / Epic Records<br>ca. 1977<br>(Michael: 19)</div>
-        </div>
-      </div>
-    </div>
-    <div class="era-content">
-      <h2>Neuer Vertrag, neue Freiheit</h2>
-      <p class="lead">1975 verließen die Jackson 5 (nun als "The Jacksons") Motown und unterschrieben bei Epic Records – ein Schritt, der Michaels Karriere für immer verändern sollte.</p>
-      <p>Die Jackson-Brüder bekamen erstmals kreative Kontrolle über ihre Musik. Gleichzeitig arbeitete Michael solo an seinen Wurzeln und traf einen Mann, der sein Leben verändern würde: Quincy Jones.</p>
-      <p>1978 spielte Michael die Rolle des "Scarecrow" im Broadway-Film <em>The Wiz</em> – dort lernte er Quincy Jones kennen, den Produzenten, mit dem er die Weltgeschichte der Popmusik neu schreiben würde.</p>
+<canvas id="canvas"></canvas>
 
-      <div class="albums-grid">
-        <div class="album-card">
-          <div class="album-cover" style="background:linear-gradient(135deg,#0d3d4d,#05202e)">⭐</div>
-          <div class="album-info">
-            <div class="album-title">The Jacksons</div>
-            <div class="album-year-tag">November 1976</div>
-            <ul class="album-songs">
-              <li>Enjoy Yourself <span class="hit-badge">HIT #6</span></li>
-              <li>Show You the Way to Go <span class="hit-badge">HIT #1 UK</span></li>
-              <li>Blues Away</li>
-              <li>Living Together</li>
-            </ul>
-          </div>
-        </div>
-        <div class="album-card">
-          <div class="album-cover" style="background:linear-gradient(135deg,#4d3d00,#2e2300)">🌍</div>
-          <div class="album-info">
-            <div class="album-title">Destiny</div>
-            <div class="album-year-tag">Dezember 1978</div>
-            <ul class="album-songs">
-              <li>Blame It on the Boogie <span class="hit-badge">HIT #5</span></li>
-              <li>Shake Your Body (Down to the Ground) <span class="hit-badge">HIT #7</span></li>
-              <li>Destiny</li>
-              <li>That's What You Get</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <ul class="events-list">
-        <li><span class="event-year">1975</span><span class="event-dot"></span>Wechsel zu Epic Records – Jermaine bleibt bei Motown</li>
-        <li><span class="event-year">1976</span><span class="event-dot"></span>Umbenennung zu "The Jacksons" (Motown behält "Jackson 5")</li>
-        <li><span class="event-year">1977</span><span class="event-dot"></span>The Jacksons TV-Show auf CBS</li>
-        <li><span class="event-year">1978</span><span class="event-dot"></span>Filmrolle als Scarecrow in "The Wiz"</li>
-        <li><span class="event-year">1978</span><span class="event-dot"></span>Begegnung mit Quincy Jones – historisches Duo entsteht</li>
-      </ul>
-
-      <div class="highlight-box">
-        <strong>The Wiz (1978):</strong> Der Film mit Diana Ross und Michael Jackson war zwar kein großer Kassenerfolg, aber die Begegnung mit Quincy Jones sollte die bedeutendste Zusammenarbeit der Musikgeschichte einleiten – Off the Wall, Thriller, Bad.
-      </div>
-    </div>
-  </div>
-</div>
-</section>
-
-<!-- ERA 1979 -->
-<section class="era-section era-1979" id="s1979">
-<div class="section-inner">
-  <div class="era-header">
-    <div class="era-year">1979–81</div>
-    <div class="era-divider"></div>
-    <div class="era-badge">Off the Wall – Der Solo-Gigant</div>
-  </div>
-  <div class="era-grid">
-    <div class="era-image">
-      <div class="img-frame">
-        <div class="img-placeholder">
-          <div class="img-icon">🕺</div>
-          <div class="img-caption">Off the Wall Era<br>ca. 1979<br>(Michael: 21)</div>
-        </div>
-      </div>
-    </div>
-    <div class="era-content">
-      <h2>Off the Wall – Ein neues Zeitalter</h2>
-      <p class="lead">1979 erschien <em>Off the Wall</em> – und Michael Jackson bewies der Welt, dass er weit mehr als ein Kinderstar war. Mit 21 Jahren definierte er sich komplett neu.</p>
-      <p>Produziert von Quincy Jones, verbindet das Album Disco, Funk, Soul und Pop auf eine Art, die die Musikwelt noch nie gehört hatte. Es war das erste Album eines Solokünstlers, aus dem vier Top-10-Singles ausgekoppelt wurden.</p>
-      <p>Das Album verkaufte sich über 20 Millionen Mal weltweit. Dennoch wurde es bei den Grammys übergangen – Michael erhielt nur eine Nominierung. Diese Demütigung würde ihn anspornen, <em>Thriller</em> zu erschaffen.</p>
-
-      <div class="albums-grid">
-        <div class="album-card" style="grid-column:1/-1">
-          <div class="album-cover" style="background:linear-gradient(135deg,#2d1b00,#1a0d00);height:200px">🎩</div>
-          <div class="album-info">
-            <div class="album-title">Off the Wall</div>
-            <div class="album-year-tag">10. August 1979 · Epic Records · Produzent: Quincy Jones</div>
-            <ul class="album-songs">
-              <li>Don't Stop 'Til You Get Enough <span class="hit-badge">HIT #1</span></li>
-              <li>Rock with You <span class="hit-badge">HIT #1</span></li>
-              <li>Off the Wall <span class="hit-badge">HIT #10</span></li>
-              <li>She's Out of My Life <span class="hit-badge">HIT #10</span></li>
-              <li>I Can't Help It</li>
-              <li>It's the Falling in Love</li>
-              <li>Get on the Floor</li>
-              <li>Working Day and Night</li>
-              <li>Burn This Disco Out</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div class="sec-title">Jacksons: Triumph (1980)</div>
-      <div class="albums-grid">
-        <div class="album-card">
-          <div class="album-cover" style="background:linear-gradient(135deg,#4d2d00,#2e1a00)">🏆</div>
-          <div class="album-info">
-            <div class="album-title">Triumph</div>
-            <div class="album-year-tag">Oktober 1980</div>
-            <ul class="album-songs">
-              <li>Can You Feel It</li>
-              <li>Heartbreak Hotel</li>
-              <li>Time Waits for No One</li>
-              <li>Walk Right Now</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div class="stats-row">
-        <div class="stat-box"><div class="stat-number">20 Mio</div><div class="stat-label">Verkäufe Off the Wall</div></div>
-        <div class="stat-box"><div class="stat-number">4</div><div class="stat-label">Top-10-Singles aus einem Album</div></div>
-        <div class="stat-box"><div class="stat-number">1</div><div class="stat-label">Grammy Nominierung (enttäuschend)</div></div>
-      </div>
-
-      <div class="incident-box">
-        <strong>Der Antrieb für Thriller:</strong> Trotz des enormen Erfolgs erhielt Off the Wall bei den Grammy Awards 1980 nur eine einzige Nominierung. Michael war tief verletzt. Diese Demütigung verwandelte er in den Ehrgeiz, ein Album zu schaffen, das unmöglich zu ignorieren sein würde.
-      </div>
-    </div>
-  </div>
-</div>
-</section>
-
-<!-- ERA 1982 -->
-<section class="era-section era-1982" id="s1982">
-<div class="section-inner">
-  <div class="era-header">
-    <div class="era-year">1982–84</div>
-    <div class="era-divider"></div>
-    <div class="era-badge">Thriller – König des Pop</div>
-  </div>
-  <div class="era-grid reverse">
-    <div class="era-image">
-      <div class="img-frame">
-        <div class="img-placeholder">
-          <div class="img-icon">👑</div>
-          <div class="img-caption">Thriller Era<br>ca. 1983<br>(Michael: 24)</div>
-        </div>
-      </div>
-    </div>
-    <div class="era-content">
-      <h2>Thriller – Das meistverkaufte Album aller Zeiten</h2>
-      <p class="lead">Am 30. November 1982 erschien <em>Thriller</em>. Es wurde zum meistverkauften Album der Musikgeschichte – über 70 Millionen Mal verkauft weltweit.</p>
-      <p>Aus einem einzigen Album wurden sieben Top-10-Singles ausgekoppelt – ein Rekord, der bis heute besteht. Das Musikvideo zu "Thriller" revolutionierte das Medium und machte MTV salonfähig.</p>
-      <p>Michael arbeitete mit Legenden zusammen: Paul McCartney auf "The Girl Is Mine", Eddie Van Halen auf "Beat It". Regisseur John Landis erschuf mit dem 14-minütigen "Thriller"-Video ein cineastisches Meisterwerk.</p>
-
-      <div class="albums-grid">
-        <div class="album-card" style="grid-column:1/-1">
-          <div class="album-cover" style="background:linear-gradient(135deg,#3d0020,#1a0010);height:200px">🎃</div>
-          <div class="album-info">
-            <div class="album-title">Thriller</div>
-            <div class="album-year-tag">30. November 1982 · Epic Records · Produzent: Quincy Jones</div>
-            <ul class="album-songs">
-              <li>Wanna Be Startin' Somethin' <span class="hit-badge">HIT #5</span></li>
-              <li>Baby Be Mine</li>
-              <li>The Girl Is Mine (feat. Paul McCartney) <span class="hit-badge">HIT #2</span></li>
-              <li>Thriller <span class="hit-badge">HIT #4</span></li>
-              <li>Beat It (feat. Eddie Van Halen) <span class="hit-badge">HIT #1</span></li>
-              <li>Billie Jean <span class="hit-badge">HIT #1</span></li>
-              <li>Human Nature <span class="hit-badge">HIT #7</span></li>
-              <li>P.Y.T. (Pretty Young Thing) <span class="hit-badge">HIT #10</span></li>
-              <li>The Lady in My Life</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div class="sec-title">Grammys 1984 – Historische Nacht</div>
-      <div class="awards-grid">
-        <div class="award-card"><div class="award-icon">🏆</div><div class="award-text"><strong>8 Grammy Awards in einer Nacht</strong>Weltrekord – damals wie heute unvergessen</div></div>
-        <div class="award-card"><div class="award-icon">🏅</div><div class="award-text"><strong>Album des Jahres</strong>Thriller – Grammy 1984</div></div>
-        <div class="award-card"><div class="award-icon">🎵</div><div class="award-text"><strong>Record of the Year</strong>"Beat It" – Grammy 1984</div></div>
-        <div class="award-card"><div class="award-icon">🎤</div><div class="award-text"><strong>Best Pop Vocal Performance</strong>"Thriller" – Grammy 1984</div></div>
-      </div>
-
-      <div class="sec-title">Der Pepsi-Unfall – 27. Januar 1984</div>
-      <div class="incident-box">
-        <strong>Ein Moment, der sein Leben veränderte:</strong> Bei den Dreharbeiten zu einem Pepsi-Werbespot fing Michaels Haar durch einen pyrotechnischen Fehler Feuer. Er erlitt Verbrennungen zweiten Grades am Kopf. Die Behandlung der Schmerzen führte erstmals zur Einnahme starker Schmerzmittel – der Beginn einer lebenslangen Abhängigkeit. Pepsi zahlte 1,5 Millionen Dollar Entschädigung, die Michael an das Brotman Memorial Hospital spendete.
-      </div>
-
-      <div class="sec-title">Moonwalk – Das ikonischste Tanzmove</div>
-      <div class="highlight-box">
-        <strong>25. März 1983 – Motown 25:</strong> Michael Jackson führte den Moonwalk erstmals im nationalen Fernsehen auf – beim TV-Special "Motown 25: Yesterday, Today and Forever". Der Moment schrieb Popgeschichte. Fred Astaire rief Michael danach persönlich an und nannte ihn "einen außergewöhnlichen Tänzer".
-      </div>
-
-      <div class="sec-title">Victory Tour 1984</div>
-      <div class="tour-card">
-        <div class="tour-name">Victory Tour</div>
-        <div class="tour-meta">Juli – Dezember 1984 · Mit The Jacksons<br>55 Konzerte · USA & Kanada</div>
-        <span class="tour-stat">5,5 Mio. Zuschauer</span>
-        <span class="tour-stat">75 Mio. $ Einnahmen</span>
-        <span class="tour-stat">Letzter Auftritt mit J5</span>
-      </div>
-
-      <div class="stats-row">
-        <div class="stat-box"><div class="stat-number">70+ Mio</div><div class="stat-label">Verkäufe Thriller</div></div>
-        <div class="stat-box"><div class="stat-number">8</div><div class="stat-label">Grammys in einer Nacht</div></div>
-        <div class="stat-box"><div class="stat-number">7</div><div class="stat-label">Top-10-Singles</div></div>
-      </div>
-    </div>
-  </div>
-</div>
-</section>
-
-<!-- ERA 1985 -->
-<section class="era-section era-1985" id="s1985">
-<div class="section-inner">
-  <div class="era-header">
-    <div class="era-year">1985–86</div>
-    <div class="era-divider"></div>
-    <div class="era-badge">We Are the World & Neverland</div>
-  </div>
-  <div class="era-grid">
-    <div class="era-image">
-      <div class="img-frame">
-        <div class="img-placeholder">
-          <div class="img-icon">🌍</div>
-          <div class="img-caption">We Are the World<br>ca. 1985<br>(Michael: 26)</div>
-        </div>
-      </div>
-    </div>
-    <div class="era-content">
-      <h2>Philanthropie & Privatleben</h2>
-      <p class="lead">Auf dem Höhepunkt seines Ruhms initiierte Michael Jackson eines der bedeutendsten Benefizprojekte der Musikgeschichte – und kaufte gleichzeitig sein Traumschloss.</p>
-
-      <ul class="events-list">
-        <li><span class="event-year">1985</span><span class="event-dot"></span>"We Are the World" – Superprojekt mit 45 Stars (Lionel Richie, co-schrieb Michael)</li>
-        <li><span class="event-year">1985</span><span class="event-dot"></span>Kauf der ATV Music Publishing für 47,5 Mio. $ (inkl. Beatles-Katalog)</li>
-        <li><span class="event-year">1985</span><span class="event-dot"></span>Captain EO – 3D-Film für Disneyland (Regie: Francis Ford Coppola)</li>
-        <li><span class="event-year">1986</span><span class="event-dot"></span>Kauf des Sycamore Valley Ranch – später Neverland umbenannt</li>
-        <li><span class="event-year">1986</span><span class="event-dot"></span>Hyperbarer Sauerstoffkammer-Skandal (Medien-Inszenierung)</li>
-      </ul>
-
-      <div class="highlight-box">
-        <strong>We Are the World (1985):</strong> 28. Januar 1985, nach den American Music Awards, versammelte Michael Jackson zusammen mit Lionel Richie die größten Stars der Welt im A&M-Studio. In einer Nacht entstand der Song – alle Egos blieben vor der Tür. Über 63 Millionen Dollar wurden für die Hungerhilfe in Afrika gesammelt.
-      </div>
-
-      <div class="highlight-box">
-        <strong>Neverland Ranch:</strong> 1987 baute Michael die Sycamore Valley Ranch zu Neverland um – 1.100 Hektar Land in Los Olivos, Kalifornien, mit eigenem Vergnügungspark, Zug, Zoo und Kino. Er nannte es "den Ort, an dem ich nie gewesen bin" – eine Welt, die ihm eine verlorene Kindheit zurückgeben sollte.
-      </div>
-
-      <div class="awards-grid">
-        <div class="award-card"><div class="award-icon">🌍</div><div class="award-text"><strong>We Are the World</strong>Grammy für Song des Jahres 1986<br>63 Mio. $ für Afrika-Hilfe</div></div>
-        <div class="award-card"><div class="award-icon">🎬</div><div class="award-text"><strong>Captain EO</strong>17-minütiger 3D-Film<br>Regie: Francis Ford Coppola (1986)</div></div>
-      </div>
-    </div>
-  </div>
-</div>
-</section>
-
-<!-- ERA 1987 -->
-<section class="era-section era-1987" id="s1987">
-<div class="section-inner">
-  <div class="era-header">
-    <div class="era-year">1987–89</div>
-    <div class="era-divider"></div>
-    <div class="era-badge">Bad – 5 Nummer-Eins-Hits</div>
-  </div>
-  <div class="era-grid reverse">
-    <div class="era-image">
-      <div class="img-frame">
-        <div class="img-placeholder">
-          <div class="img-icon">🦅</div>
-          <div class="img-caption">Bad World Tour<br>ca. 1987–89<br>(Michael: 29–31)</div>
-        </div>
-      </div>
-    </div>
-    <div class="era-content">
-      <h2>Bad – Die Meisterschule des Pop</h2>
-      <p class="lead">1987 erschien <em>Bad</em> und produzierte fünf aufeinanderfolgende Nummer-1-Singles in den USA – ein Rekord, der bis heute kein Soloalbum gebrochen hat.</p>
-      <p>Obwohl es mit Thriller verglichen wurde – ein nahezu unmöglicher Maßstab – war Bad in seiner eigenen Kategorie ein monumentales Werk. Der Stil wurde aggressiver, die Tanzchoreografien komplexer, die Ästhetik dunkler.</p>
-
-      <div class="albums-grid">
-        <div class="album-card" style="grid-column:1/-1">
-          <div class="album-cover" style="background:linear-gradient(135deg,#1a001a,#0d000d);height:200px">🦇</div>
-          <div class="album-info">
-            <div class="album-title">Bad</div>
-            <div class="album-year-tag">31. August 1987 · Epic Records · Produzent: Quincy Jones</div>
-            <ul class="album-songs">
-              <li>Bad <span class="hit-badge">HIT #1</span></li>
-              <li>The Way You Make Me Feel <span class="hit-badge">HIT #1</span></li>
-              <li>Speed Demon</li>
-              <li>Liberian Girl</li>
-              <li>Just Good Friends</li>
-              <li>Another Part of Me <span class="hit-badge">HIT #11</span></li>
-              <li>Man in the Mirror <span class="hit-badge">HIT #1</span></li>
-              <li>I Just Can't Stop Loving You <span class="hit-badge">HIT #1</span></li>
-              <li>Dirty Diana <span class="hit-badge">HIT #1</span></li>
-              <li>Smooth Criminal <span class="hit-badge">HIT #7</span></li>
-              <li>Leave Me Alone</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div class="sec-title">Bad World Tour 1987–1989</div>
-      <div class="tour-card">
-        <div class="tour-name">Bad World Tour</div>
-        <div class="tour-meta">12. September 1987 – 14. Januar 1989<br>123 Konzerte · 15 Länder auf 4 Kontinenten</div>
-        <span class="tour-stat">4,4 Mio. Zuschauer</span>
-        <span class="tour-stat">125 Mio. $ Einnahmen</span>
-        <span class="tour-stat">Erfolgreichste Tour der Zeit</span>
-      </div>
-
-      <div class="sec-title">Höhepunkte der Bad-Ära</div>
-      <ul class="events-list">
-        <li><span class="event-year">1987</span><span class="event-dot"></span>Bad erscheint – erster Solist mit 5 Nr.1-Singles aus einem Album (USA)</li>
-        <li><span class="event-year">1987</span><span class="event-dot"></span>Gerüchte über Hauttransplantationen beginnen</li>
-        <li><span class="event-year">1988</span><span class="event-dot"></span>Autobiographie "Moonwalk" erscheint – Bestseller</li>
-        <li><span class="event-year">1988</span><span class="event-dot"></span>Konzert vor 72.000 Zuschauern in Wembley Stadion (2x ausverkauft)</li>
-        <li><span class="event-year">1989</span><span class="event-dot"></span>Auftritt beim Apollo Theater 50th Anniversary Gala</li>
-      </ul>
-
-      <div class="stats-row">
-        <div class="stat-box"><div class="stat-number">35 Mio</div><div class="stat-label">Verkäufe Bad</div></div>
-        <div class="stat-box"><div class="stat-number">5</div><div class="stat-label">Nr.1-Singles in Folge (USA)</div></div>
-        <div class="stat-box"><div class="stat-number">123</div><div class="stat-label">Konzerte auf Bad-Tournee</div></div>
-      </div>
-    </div>
-  </div>
-</div>
-</section>
-
-<!-- ERA 1991 -->
-<section class="era-section era-1991" id="s1991">
-<div class="section-inner">
-  <div class="era-header">
-    <div class="era-year">1991–92</div>
-    <div class="era-divider"></div>
-    <div class="era-badge">Dangerous – Schwarzweiss & Super Bowl</div>
-  </div>
-  <div class="era-grid">
-    <div class="era-image">
-      <div class="img-frame">
-        <div class="img-placeholder">
-          <div class="img-icon">⚡</div>
-          <div class="img-caption">Dangerous Era<br>ca. 1991–92<br>(Michael: 33–34)</div>
-        </div>
-      </div>
-    </div>
-    <div class="era-content">
-      <h2>Dangerous – Schwarz oder Weiß</h2>
-      <p class="lead"><em>Dangerous</em> markierte Michaels ersten Schritt ohne Quincy Jones – und beinhaltete einige seiner sozial bedeutendsten Songs.</p>
-      <p>Mit neuen Produzenten wie Teddy Riley (New Jack Swing) und Bill Bottrell öffnete Michael Jackson neue musikalische Welten. "Black or White" wurde in 27 Ländern gleichzeitig Nummer 1 – das hatte noch niemand zuvor erreicht.</p>
-
-      <div class="albums-grid">
-        <div class="album-card" style="grid-column:1/-1">
-          <div class="album-cover" style="background:linear-gradient(135deg,#001a1a,#000d0d);height:200px">🖤</div>
-          <div class="album-info">
-            <div class="album-title">Dangerous</div>
-            <div class="album-year-tag">26. November 1991 · Epic Records · Produzenten: Teddy Riley, Bill Bottrell</div>
-            <ul class="album-songs">
-              <li>Jam <span class="hit-badge">HIT #26</span></li>
-              <li>Why You Wanna Trip on Me</li>
-              <li>In the Closet <span class="hit-badge">HIT #6</span></li>
-              <li>She Drives Me Wild</li>
-              <li>Remember the Time <span class="hit-badge">HIT #3</span></li>
-              <li>Can't Let Her Get Away</li>
-              <li>Heal the World <span class="hit-badge">HIT #27</span></li>
-              <li>Black or White <span class="hit-badge">HIT #1 – 27 Länder</span></li>
-              <li>Who Is It <span class="hit-badge">HIT #14</span></li>
-              <li>Give In to Me</li>
-              <li>Will You Be There <span class="hit-badge">HIT #7</span></li>
-              <li>Keep the Faith</li>
-              <li>Gone Too Soon</li>
-              <li>Dangerous</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div class="sec-title">Super Bowl XXVII Halftime Show – 31. Januar 1993</div>
-      <div class="highlight-box">
-        <strong>Die größte Halbzeitshow aller Zeiten:</strong> Vor 90.000 Zuschauern im Stadion und über 135 Millionen TV-Zuschauern allein in den USA lieferte Michael Jackson eine historische Performance. Er stand 90 Sekunden reglos auf der Bühne – und das Publikum tobte. Die Show gilt bis heute als Blaupause aller modernen Halftime-Shows.
-      </div>
-
-      <div class="sec-title">Dangerous World Tour 1992–1993</div>
-      <div class="tour-card">
-        <div class="tour-name">Dangerous World Tour</div>
-        <div class="tour-meta">27. Juni 1992 – 11. November 1993<br>69 Konzerte · Europa, Asien, Afrika, Lateinamerika</div>
-        <span class="tour-stat">3,5 Mio. Zuschauer</span>
-        <span class="tour-stat">Erste Tour in Afrika</span>
-        <span class="tour-stat">Für Heal the World Foundation</span>
-      </div>
-
-      <div class="sec-title">Heal the World Foundation</div>
-      <div class="highlight-box">
-        <strong>Gründung 1992:</strong> Michael gründete die Heal the World Foundation – ein Wohltätigkeitsprojekt, das Kindern in Krisengebieten Hilfe brachte. Millionen wurden gespendet. Michael ließ Kinder von Bosnien nach Disneyland fliegen und finanzierte Impfprogramme.
-      </div>
-
-      <div class="stats-row">
-        <div class="stat-box"><div class="stat-number">32 Mio</div><div class="stat-label">Verkäufe Dangerous</div></div>
-        <div class="stat-box"><div class="stat-number">27</div><div class="stat-label">Länder mit Nr.1 "Black or White"</div></div>
-        <div class="stat-box"><div class="stat-number">135 Mio</div><div class="stat-label">Super-Bowl-Zuschauer (US)</div></div>
-      </div>
-    </div>
-  </div>
-</div>
-</section>
-
-<!-- ERA 1993 -->
-<section class="era-section era-1993" id="s1993">
-<div class="section-inner">
-  <div class="era-header">
-    <div class="era-year">1993–94</div>
-    <div class="era-divider"></div>
-    <div class="era-badge">Die ersten Anschuldigungen</div>
-  </div>
-  <div class="era-grid reverse">
-    <div class="era-image">
-      <div class="img-frame">
-        <div class="img-placeholder">
-          <div class="img-icon">⚖️</div>
-          <div class="img-caption">Schwierige Zeiten<br>ca. 1993<br>(Michael: 35)</div>
-        </div>
-      </div>
-    </div>
-    <div class="era-content">
-      <h2>Missbrauchsvorwürfe & Oprah-Interview</h2>
-      <p class="lead">Mitten im Triumphzug der Dangerous-Tour tauchten 1993 Vorwürfe auf, die Michael Jackson für den Rest seines Lebens verfolgen sollten.</p>
-
-      <ul class="events-list">
-        <li><span class="event-year">Feb 1993</span><span class="event-dot"></span>Historisches Interview mit Oprah Winfrey – 90 Mio. Zuschauer</li>
-        <li><span class="event-year">Feb 1993</span><span class="event-dot"></span>Gibt Hauterkrankung Vitiligo öffentlich zu</li>
-        <li><span class="event-year">Aug 1993</span><span class="event-dot"></span>Jordan Chandler (13) erhebt Missbrauchsvorwürfe</li>
-        <li><span class="event-year">Sep 1993</span><span class="event-dot"></span>Dangerous Tour abgebrochen wegen "Medikamentenabhängigkeit"</li>
-        <li><span class="event-year">Jan 1994</span><span class="event-dot"></span>Zivilrechtliche Einigung mit Familie Chandler: ~23 Mio. $</li>
-        <li><span class="event-year">1994</span><span class="event-dot"></span>Keine strafrechtliche Anklage – kein ausreichendes Beweismaterial</li>
-        <li><span class="event-year">Mai 1994</span><span class="event-dot"></span>Heirat mit Lisa Marie Presley (Tochter von Elvis)</li>
-      </ul>
-
-      <div class="incident-box">
-        <strong>Die Anschuldigungen 1993:</strong> Jordan Chandlers Vater Evan Chandler behauptete, sein Sohn sei von Michael Jackson missbraucht worden. Es folgte eine strafrechtliche Untersuchung. Da keine ausreichenden Beweise für eine strafrechtliche Anklage vorlagen, wurde ein Zivilvergleich geschlossen. Michael beteuerte stets seine Unschuld. Die Kontroverse spaltete die Welt.
-      </div>
-
-      <div class="highlight-box">
-        <strong>Das Oprah-Interview (10. Februar 1993):</strong> Zum ersten Mal seit 14 Jahren gab Michael ein ausführliches TV-Interview – ein globales Ereignis. Er sprach über seine Kindheit, seine Hauterkrankung (Vitiligo und Lupus), seine Liebe zu Kindern und den Schmerz seines Lebens. 90 Millionen Zuschauer schalteten ein.
-      </div>
-
-      <div class="highlight-box">
-        <strong>Heirat mit Lisa Marie Presley (26. Mai 1994):</strong> Michael Jackson heiratete die Tochter von Elvis Presley in einer geheimen Zeremonie in der Dominikanischen Republik. Die Ehe überraschte die Welt – viele glaubten an eine PR-Strategie. Das Paar trennte sich 1996 nach 20 Monaten.
-      </div>
-    </div>
-  </div>
-</div>
-</section>
-
-<!-- ERA 1995 -->
-<section class="era-section era-1995" id="s1995">
-<div class="section-inner">
-  <div class="era-header">
-    <div class="era-year">1995–2000</div>
-    <div class="era-divider"></div>
-    <div class="era-badge">HIStory – Kampf & Rückkehr</div>
-  </div>
-  <div class="era-grid">
-    <div class="era-image">
-      <div class="img-frame">
-        <div class="img-placeholder">
-          <div class="img-icon">🗿</div>
-          <div class="img-caption">HIStory Era<br>ca. 1995<br>(Michael: 37)</div>
-        </div>
-      </div>
-    </div>
-    <div class="era-content">
-      <h2>HIStory – Antwort an die Welt</h2>
-      <p class="lead"><em>HIStory</em> war Michaels Antwort auf Jahre des Drucks, der Vorwürfe und der Medienverfolgung. Das Doppelalbum war wütend, verletzlich und triumphierend zugleich.</p>
-      <p>Die erste CD enthielt 15 seiner größten Hits; die zweite 15 neue Songs. Mit Songs wie "They Don't Care About Us" und "Stranger in Moscow" zeigte Michael eine düsterere, politischere Seite – und polarisierte damit wie nie zuvor.</p>
-
-      <div class="albums-grid">
-        <div class="album-card" style="grid-column:1/-1">
-          <div class="album-cover" style="background:linear-gradient(135deg,#0a1a00,#050d00);height:200px">🌿</div>
-          <div class="album-info">
-            <div class="album-title">HIStory: Past, Present and Future, Book I</div>
-            <div class="album-year-tag">20. Juni 1995 · Epic Records · Doppelalbum</div>
-            <ul class="album-songs">
-              <li>Scream (feat. Janet Jackson) <span class="hit-badge">HIT #5</span></li>
-              <li>They Don't Care About Us <span class="hit-badge">HIT #30</span></li>
-              <li>Stranger in Moscow <span class="hit-badge">HIT #22</span></li>
-              <li>This Time Around</li>
-              <li>Earth Song <span class="hit-badge">HIT #1 UK</span></li>
-              <li>D.S.</li>
-              <li>Money</li>
-              <li>Come Together</li>
-              <li>You Are Not Alone <span class="hit-badge">HIT #1</span></li>
-              <li>Childhood</li>
-              <li>Tabloid Junkie</li>
-              <li>2 Bad</li>
-              <li>HIStory</li>
-              <li>Little Susie</li>
-              <li>Smile</li>
-            </ul>
-          </div>
-        </div>
-        <div class="album-card">
-          <div class="album-cover" style="background:linear-gradient(135deg,#1a0a1a,#0d050d)">💉</div>
-          <div class="album-info">
-            <div class="album-title">Blood on the Dance Floor</div>
-            <div class="album-year-tag">Mai 1997 · Remix-Album</div>
-            <ul class="album-songs">
-              <li>Blood on the Dance Floor <span class="hit-badge">HIT #1 UK</span></li>
-              <li>Ghosts <span class="hit-badge">HIT #1 UK</span></li>
-              <li>History (ATCQ Mix)</li>
-              <li>Morphine</li>
-              <li>Superfly Sister</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div class="sec-title">HIStory World Tour 1996–1997</div>
-      <div class="tour-card">
-        <div class="tour-name">HIStory World Tour</div>
-        <div class="tour-meta">7. September 1996 – 15. Oktober 1997<br>82 Konzerte · 35 Länder</div>
-        <span class="tour-stat">4,5 Mio. Zuschauer</span>
-        <span class="tour-stat">165 Mio. $ Einnahmen</span>
-        <span class="tour-stat">Höchstgröße der Zeit</span>
-      </div>
-
-      <div class="sec-title">Persönliche Ereignisse</div>
-      <ul class="events-list">
-        <li><span class="event-year">1995</span><span class="event-dot"></span>"You Are Not Alone" – erster Song in Geschichte, der auf Platz #1 debütiert (Billboard)</li>
-        <li><span class="event-year">1996</span><span class="event-dot"></span>Scheidung von Lisa Marie Presley</li>
-        <li><span class="event-year">Nov 1996</span><span class="event-dot"></span>Heirat mit Debbie Rowe (Krankenschwester)</li>
-        <li><span class="event-year">Feb 1997</span><span class="event-dot"></span>Sohn Michael Joseph Jr. "Prince" wird geboren</li>
-        <li><span class="event-year">Apr 1998</span><span class="event-dot"></span>Tochter Paris-Michael Katherine wird geboren</li>
-        <li><span class="event-year">1999</span><span class="event-dot"></span>Scheidung von Debbie Rowe</li>
-        <li><span class="event-year">1999</span><span class="event-dot"></span>Michael Live in Seoul – letztes offizielles Solokonzert für lange Zeit</li>
-      </ul>
-
-      <div class="sec-title">Awards dieser Ära</div>
-      <div class="awards-grid">
-        <div class="award-card"><div class="award-icon">🏆</div><div class="award-text"><strong>Grammy Legend Award</strong>1993 – für außerordentlichen Beitrag zur Musik</div></div>
-        <div class="award-card"><div class="award-icon">🌟</div><div class="award-text"><strong>American Music Award</strong>Artist of the Decade (80er & 90er)</div></div>
-        <div class="award-card"><div class="award-icon">📀</div><div class="award-text"><strong>"You Are Not Alone"</strong>Erster debütierender Nr.1-Hit in der Billboard-Geschichte</div></div>
-        <div class="award-card"><div class="award-icon">🏅</div><div class="award-text"><strong>World Music Award</strong>Meistverkaufter Künstler der Geschichte (1996)</div></div>
-      </div>
-
-      <div class="stats-row">
-        <div class="stat-box"><div class="stat-number">22 Mio</div><div class="stat-label">Verkäufe HIStory</div></div>
-        <div class="stat-box"><div class="stat-number">35</div><div class="stat-label">Länder auf HIStory-Tour</div></div>
-        <div class="stat-box"><div class="stat-number">2</div><div class="stat-label">Kinder bis 1998</div></div>
-      </div>
-    </div>
-  </div>
-</div>
-</section>
-
-<!-- ERA 2001 -->
-<section class="era-section era-2001" id="s2001">
-<div class="section-inner">
-  <div class="era-header">
-    <div class="era-year">2001–05</div>
-    <div class="era-divider"></div>
-    <div class="era-badge">Invincible & Der Prozess</div>
-  </div>
-  <div class="era-grid reverse">
-    <div class="era-image">
-      <div class="img-frame">
-        <div class="img-placeholder">
-          <div class="img-icon">⚖️</div>
-          <div class="img-caption">Invincible / Prozess<br>ca. 2003–05<br>(Michael: 45–47)</div>
-        </div>
-      </div>
-    </div>
-    <div class="era-content">
-      <h2>Invincible & Kampf um Unschuld</h2>
-      <p class="lead">Nach einer 6-jährigen Pause erschien 2001 <em>Invincible</em> – es sollte Michaels letztes Studioalbum zu Lebzeiten werden. Parallel begann der dunkelste Kapitel seines Lebens.</p>
-
-      <div class="albums-grid">
-        <div class="album-card" style="grid-column:1/-1">
-          <div class="album-cover" style="background:linear-gradient(135deg,#1a0a10,#0d0508);height:200px">💪</div>
-          <div class="album-info">
-            <div class="album-title">Invincible</div>
-            <div class="album-year-tag">30. Oktober 2001 · Epic Records</div>
-            <ul class="album-songs">
-              <li>Unbreakable</li>
-              <li>Heartbreaker</li>
-              <li>Invincible</li>
-              <li>Break of Dawn</li>
-              <li>Heaven Can Wait</li>
-              <li>You Rock My World <span class="hit-badge">HIT #10</span></li>
-              <li>Butterflies <span class="hit-badge">HIT #14</span></li>
-              <li>Speechless</li>
-              <li>2000 Watts</li>
-              <li>You Are My Life</li>
-              <li>Privacy</li>
-              <li>Don't Walk Away</li>
-              <li>Cry</li>
-              <li>The Lost Children</li>
-              <li>Whatever Happens</li>
-              <li>Threatened</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div class="sec-title">Schlüsselereignisse</div>
-      <ul class="events-list">
-        <li><span class="event-year">Sep 2001</span><span class="event-dot"></span>30th Anniversary Konzerte im Madison Square Garden</li>
-        <li><span class="event-year">Nov 2001</span><span class="event-dot"></span>Invincible erscheint – beginnt mit 13 Mio. Verkäufen</li>
-        <li><span class="event-year">Feb 2002</span><span class="event-dot"></span>Sohn Blanket (Michael Joseph Jackson Jr.) geboren via Leihmutter</li>
-        <li><span class="event-year">Nov 2002</span><span class="event-dot"></span>Balkon-Vorfall in Berlin: Michael hält Baby Blanket über Hotelbalkon</li>
-        <li><span class="event-year">Feb 2003</span><span class="event-dot"></span>Martin Bashir-Dokumentation "Living with Michael Jackson" – weltweiter Schock</li>
-        <li><span class="event-year">Nov 2003</span><span class="event-dot"></span>Zweite Missbrauchsvorwürfe (Gavin Arvizo) – Hausdurchsuchung Neverland</li>
-        <li><span class="event-year">Dez 2003</span><span class="event-dot"></span>Verhaftung & 70 Mio. $ Kaution</li>
-        <li><span class="event-year">Jun 2005</span><span class="event-dot"></span><strong>FREISPRUCH in allen 14 Anklagepunkten</strong> – 13. Juni 2005</li>
-      </ul>
-
-      <div class="incident-box">
-        <strong>Der Strafprozess 2003–2005:</strong> Nach einer monatelangen Untersuchung wurde Michael Jackson in 14 Anklagepunkten angeklagt, darunter Kindesmissbrauch und das Geben von Alkohol an Minderjährige. Der Prozess dauerte über sechs Monate. Am 13. Juni 2005 wurde er in allen Punkten für nicht schuldig befunden. Michael verließ danach die USA und lebte in Bahrain.
-      </div>
-
-      <div class="highlight-box">
-        <strong>Balkon-Vorfall Berlin (2002):</strong> Michael Jackson hielt seinen wenige Monate alten Sohn Blanket kurz über das Geländer eines Berliner Hotelzimmers, um ihn den wartenden Fans zu zeigen. Die Bilder gingen um die Welt und lösten internationale Empörung aus. Michael entschuldigte sich später öffentlich.
-      </div>
-
-      <div class="stats-row">
-        <div class="stat-box"><div class="stat-number">14</div><div class="stat-label">Anklagepunkte – alle freigesprochen</div></div>
-        <div class="stat-box"><div class="stat-number">6 Mo.</div><div class="stat-label">Prozessdauer</div></div>
-        <div class="stat-box"><div class="stat-number">3</div><div class="stat-label">Kinder (Prince, Paris, Blanket)</div></div>
-      </div>
-    </div>
-  </div>
-</div>
-</section>
-
-<!-- ERA 2009 -->
-<section class="era-section era-2009" id="s2009">
-<div class="section-inner">
-  <div class="era-header">
-    <div class="era-year">2006–2009</div>
-    <div class="era-divider"></div>
-    <div class="era-badge">This Is It – Das letzte Kapitel</div>
-  </div>
-  <div class="era-grid">
-    <div class="era-image">
-      <div class="img-frame">
-        <div class="img-placeholder">
-          <div class="img-icon">🌟</div>
-          <div class="img-caption">This Is It<br>ca. 2009<br>(Michael: 50)</div>
-        </div>
-      </div>
-    </div>
-    <div class="era-content">
-      <h2>This Is It – Die Rückkehr, die nie war</h2>
-      <p class="lead">2009 plante Michael Jackson sein größtes Comeback – 50 ausverkaufte Konzerte in London. Er kam nicht dazu. Am 25. Juni 2009 starb der König des Pop.</p>
-      <p>Nach dem Freispruch 2005 lebte Michael zunächst in Bahrain, Irland und Las Vegas. Er arbeitete an neuer Musik und suchte nach Wegen zurück ins Rampenlicht. Im März 2009 kündigte er die "This Is It"-Konzertserie in der O2 Arena London an – alle 50 Shows waren in Minuten ausverkauft.</p>
-
-      <ul class="events-list">
-        <li><span class="event-year">2006</span><span class="event-dot"></span>Umzug nach Las Vegas – lebte zeitweise unter Pseudonym</li>
-        <li><span class="event-year">2007</span><span class="event-dot"></span>Arbeiten an neuem Studioalbum begonnen</li>
-        <li><span class="event-year">2008</span><span class="event-dot"></span>Thriller 25 – Jubiläumsedition erscheint</li>
-        <li><span class="event-year">Mär 2009</span><span class="event-dot"></span>Pressekonferenz: Ankündigung "This Is It" – 50 Shows in London O2</li>
-        <li><span class="event-year">Mär 2009</span><span class="event-dot"></span>Alle Tickets in Minuten ausverkauft – über 1 Mio. Nachfragen</li>
-        <li><span class="event-year">Jun 2009</span><span class="event-dot"></span>Intensive Proben in Los Angeles (Staples Center)</li>
-        <li><span class="event-year">25.06.2009</span><span class="event-dot"></span><strong>Tod durch Herzstillstand</strong> – verursacht durch Propofol-Überdosierung</li>
-        <li><span class="event-year">29.08.2009</span><span class="event-dot"></span>Öffentliche Gedenkfeier im Staples Center – weltweit übertragen</li>
-        <li><span class="event-year">Okt 2009</span><span class="event-dot"></span>Dokumentarfilm "This Is It" erscheint – weltweit 261 Mio. $ Einspielergebnis</li>
-        <li><span class="event-year">Nov 2011</span><span class="event-dot"></span>Dr. Conrad Murray wegen fahrlässiger Tötung verurteilt – 4 Jahre Haft</li>
-      </ul>
-
-      <div class="incident-box">
-        <strong>Tod am 25. Juni 2009:</strong> Um 14:26 Uhr Ortszeit wurde der Notruf aus Michaels gemieteter Villa in Holmby Hills, Los Angeles, abgesetzt. Michael Jackson wurde leblos im Schlafzimmer vorgefunden. Sein persönlicher Arzt Dr. Conrad Murray hatte ihm das Narkosemittel Propofol als Schlafmittel verabreicht – eine lebensgefährliche, medizinisch inakzeptable Praxis. Michael starb an akutem Propofol- und Benzodiazepin-Intoxikation. Er wurde 50 Jahre alt.
-      </div>
-
-      <div class="highlight-box">
-        <strong>Gedenkfeier (7. Juli 2009):</strong> Über 17.500 Menschen füllten das Staples Center in Los Angeles. Weltweit verfolgten geschätzte 1 Milliarde Menschen die Zeremonie im Fernsehen. Jermaine Jackson sang "Smile" – Michaels Lieblingslied. Paris Jackson sprach öffentlich zum ersten Mal – mit zitternder Stimme: "Er war der beste Vater, den man sich vorstellen kann."
-      </div>
-
-      <div class="sec-title">Posthume Veröffentlichungen</div>
-      <div class="albums-grid">
-        <div class="album-card">
-          <div class="album-cover" style="background:linear-gradient(135deg,#0a0a1a,#050508)">👻</div>
-          <div class="album-info">
-            <div class="album-title">Michael</div>
-            <div class="album-year-tag">Dezember 2010 · Posthum</div>
-            <ul class="album-songs">
-              <li>Hollywood Tonight</li>
-              <li>(I Can't Make It) Another Day</li>
-              <li>Behind the Mask</li>
-              <li>Keep Your Head Up</li>
-            </ul>
-          </div>
-        </div>
-        <div class="album-card">
-          <div class="album-cover" style="background:linear-gradient(135deg,#1a1500,#0d0b00)">🎵</div>
-          <div class="album-info">
-            <div class="album-title">Xscape</div>
-            <div class="album-year-tag">Mai 2014 · Posthum</div>
-            <ul class="album-songs">
-              <li>Love Never Felt So Good <span class="hit-badge">HIT #9</span></li>
-              <li>Chicago</li>
-              <li>Loving You</li>
-              <li>A Place with No Name</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-
-      <div class="stats-row">
-        <div class="stat-box"><div class="stat-number">50</div><div class="stat-label">Geplante This Is It Shows</div></div>
-        <div class="stat-box"><div class="stat-number">1 Mrd</div><div class="stat-label">Zuschauer der Gedenkfeier</div></div>
-        <div class="stat-box"><div class="stat-number">50</div><div class="stat-label">Lebensjahre</div></div>
-      </div>
-    </div>
-  </div>
-</div>
-</section>
-
-<!-- AWARDS TOTAL -->
-<section style="padding:80px 0;background:#0d0d0d">
-<div class="section-inner">
-  <div style="text-align:center;margin-bottom:50px">
-    <div style="font-size:.8rem;letter-spacing:5px;text-transform:uppercase;color:var(--gold);margin-bottom:15px">Die Bilanz eines Lebens</div>
-    <h2 style="font-family:'Playfair Display',serif;font-size:clamp(1.8rem,4vw,3rem);color:#fff">Auszeichnungen & Rekorde</h2>
-  </div>
-
-  <div class="awards-grid" style="grid-template-columns:repeat(auto-fill,minmax(240px,1fr))">
-    <div class="award-card"><div class="award-icon">🏆</div><div class="award-text"><strong>13 Grammy Awards</strong>+ Grammy Legend Award (1993) + Grammy Lifetime Achievement Award (2010, posthum)</div></div>
-    <div class="award-card"><div class="award-icon">🌟</div><div class="award-text"><strong>26 American Music Awards</strong>Mehr als jeder andere Künstler in der Geschichte</div></div>
-    <div class="award-card"><div class="award-icon">📀</div><div class="award-text"><strong>750+ Millionen Alben</strong>Geschätzte Gesamtverkäufe weltweit</div></div>
-    <div class="award-card"><div class="award-icon">📖</div><div class="award-text"><strong>39 Guinness Weltrekorde</strong>Meistverkaufter Künstler aller Zeiten u. v. m.</div></div>
-    <div class="award-card"><div class="award-icon">🎭</div><div class="award-text"><strong>Rock and Roll Hall of Fame</strong>Als Jackson 5-Mitglied (1997) & solo (2001)</div></div>
-    <div class="award-card"><div class="award-icon">🎵</div><div class="award-text"><strong>Billboard – Künstler des Jahrhunderts</strong>Einmalige Auszeichnung für das 20. Jahrhundert</div></div>
-    <div class="award-card"><div class="award-icon">⭐</div><div class="award-text"><strong>Hollywood Walk of Fame</strong>Stern als Jackson 5-Mitglied und als Solist</div></div>
-    <div class="award-card"><div class="award-icon">🌍</div><div class="award-text"><strong>World Music Award</strong>Mehrfach: Meistverkaufter Popkünstler der Geschichte</div></div>
-    <div class="award-card"><div class="award-icon">💿</div><div class="award-text"><strong>Thriller – Nr. 1 aller Zeiten</strong>70+ Mio. Exemplare – meistverkauftes Album der Musikgeschichte</div></div>
-    <div class="award-card"><div class="award-icon">🏅</div><div class="award-text"><strong>Presidential Commendation</strong>Vom Weißen Haus für Wohltätigkeitsarbeit anerkannt</div></div>
-  </div>
-
-  <div class="stats-row" style="margin-top:40px">
-    <div class="stat-box"><div class="stat-number">13</div><div class="stat-label">Grammy Awards</div></div>
-    <div class="stat-box"><div class="stat-number">26</div><div class="stat-label">American Music Awards</div></div>
-    <div class="stat-box"><div class="stat-number">39</div><div class="stat-label">Guinness Rekorde</div></div>
-    <div class="stat-box"><div class="stat-number">750 Mio</div><div class="stat-label">Albenverkäufe</div></div>
-    <div class="stat-box"><div class="stat-number">5</div><div class="stat-label">Welttouren als Solist</div></div>
-  </div>
-</div>
-</section>
-
-<!-- BOTSCHAFT -->
-<section id="botschaft">
-<div class="botschaft-inner">
-  <div class="botschaft-label">Das Erbe seiner Worte</div>
-  <h2 class="botschaft-title">Die Botschaft seiner Lieder</h2>
-  <p style="font-size:.95rem;color:var(--text2);line-height:1.8;max-width:700px;margin:0 auto">Michael Jackson war mehr als ein Entertainer. Seine Songs trugen Botschaften in sich, die weit über Musik hinausgingen – über Liebe, Gerechtigkeit, Frieden und die Kraft des Einzelnen.</p>
-
-  <div class="message-cards">
-    <div class="message-card">
-      <div class="message-song">Man in the Mirror (1987)</div>
-      <div class="message-title">Veränderung beginnt bei dir selbst</div>
-      <div class="message-text">"If you wanna make the world a better place, take a look at yourself and then make a change." – Die radikale Idee: Nicht die Welt anklagen, sondern sich selbst verändern. Gesellschaftlicher Wandel beginnt im Spiegel.</div>
-    </div>
-    <div class="message-card">
-      <div class="message-song">Heal the World (1991)</div>
-      <div class="message-title">Menschlichkeit als Weltsprache</div>
-      <div class="message-text">Einer der bekanntesten Appelle für Frieden und Mitgefühl der Musikgeschichte. Michael sang für die Kinder dieser Welt – und gründete dazu eine Foundation, die Millionen sammelte.</div>
-    </div>
-    <div class="message-card">
-      <div class="message-song">Black or White (1991)</div>
-      <div class="message-title">Rassismus hat keine Berechtigung</div>
-      <div class="message-text">Der Song war Michaels klarste Aussage gegen Rassismus – zu einer Zeit, als er selbst von seiner eigenen veränderten Hautfarbe zerrissen wurde. Die Botschaft: Hautfarbe definiert keinen Menschen.</div>
-    </div>
-    <div class="message-card">
-      <div class="message-song">Earth Song (1995)</div>
-      <div class="message-title">Die Erde schreit – hört ihr?</div>
-      <div class="message-text">Leidenschaftlicher Protest gegen Umweltzerstörung, Kriege und Tiersterben. Jahrzehnte vor Fridays for Future sang Michael Jackson: "What about the bleeding Earth?" – ein Ruf, der bis heute hallt.</div>
-    </div>
-    <div class="message-card">
-      <div class="message-song">They Don't Care About Us (1996)</div>
-      <div class="message-title">Soziale Ungerechtigkeit benennen</div>
-      <div class="message-text">Michaels direkteste politische Aussage – gegen Rassismus, systemische Unterdrückung und Medienmanipulation. Der Song war so provokant, dass er Kontroversen auslöste. Die Wahrheit, die er sang, brannte.</div>
-    </div>
-    <div class="message-card">
-      <div class="message-song">Childhood (1995)</div>
-      <div class="message-title">Das verlorene Kind</div>
-      <div class="message-text">"Have you seen my Childhood?" – Michaels persönlichster Song. Ein Ausdruck der Trauer um eine Kindheit, die er nie haben durfte. Eine Erklärung seiner Neverland-Welt, die viele nie verstehen wollten.</div>
-    </div>
-    <div class="message-card">
-      <div class="message-song">Will You Be There (1991)</div>
-      <div class="message-title">Universelle Bitte um Beistand</div>
-      <div class="message-text">Ein Appell an die Menschlichkeit – bitte da zu sein, wenn jemand fällt. Gleichzeitig ein religiöser, spiritueller Ruf nach göttlicher Führung in dunklen Zeiten. Tief, persönlich, universell.</div>
-    </div>
-    <div class="message-card">
-      <div class="message-song">We Are the World (1985)</div>
-      <div class="message-title">Zusammen sind wir stärker</div>
-      <div class="message-text">45 Superstars, eine Botschaft: Globale Solidarität kann Leben retten. Über 63 Millionen Dollar für die Hungerhilfe in Afrika. Bis heute ein Symbol dafür, was Musik leisten kann, wenn sie für etwas Größeres brennt.</div>
-    </div>
-    <div class="message-card">
-      <div class="message-song">Stranger in Moscow (1996)</div>
-      <div class="message-title">Einsamkeit im Rampenlicht</div>
-      <div class="message-text">Einer seiner dunkelsten Songs – geschrieben während einer einsamen Nacht in Moskau auf der Dangerous Tour. Die Ironie: Der berühmteste Mensch der Welt fühlte sich wie ein Fremder. Allein. Unsichtbar.</div>
-    </div>
-    <div class="message-card">
-      <div class="message-song">Human Nature (1982)</div>
-      <div class="message-title">Sehnsucht nach echten Verbindungen</div>
-      <div class="message-text">Einer seiner zartesten Songs. Die Sehnsucht nach echtem menschlichen Kontakt, nach Zugehörigkeit – ohne Bühne, ohne Rampenlicht, ohne Masken. "Why, why – tell them that it's human nature."</div>
-    </div>
-    <div class="message-card">
-      <div class="message-song">Gone Too Soon (1993)</div>
-      <div class="message-title">Trauer und Mitgefühl</div>
-      <div class="message-text">Für Ryan White geschrieben – einen jungen Jungen, der an AIDS starb. Michaels Stimme für jene, die die Gesellschaft vergisst. Ein Song über verlorenes Leben und die Pflicht, zu trauern.</div>
-    </div>
-    <div class="message-card">
-      <div class="message-song">Thriller (1982)</div>
-      <div class="message-title">Die Kraft der Fantasie</div>
-      <div class="message-text">Nicht jede Botschaft ist politisch. Michael Jackson lehrte auch: Musik darf spielen, erschrecken, begeistern. Unterhaltung ist eine Kunstform. Thriller war der Beweis, dass ein Musikvideo Kino sein kann.</div>
-    </div>
-  </div>
-</div>
-</section>
-
-<!-- ABSCHLUSS -->
-<section id="abschluss">
-<div class="closing-inner">
-  <div class="closing-icon">♛</div>
-  <p class="closing-quote">"Das war das Leben von Michael Jackson –<br>an seinen Höhen und an seinen Tiefpunkten."</p>
-  <div class="closing-line"></div>
-  <p style="font-size:.95rem;color:var(--text2);line-height:1.9;margin-bottom:30px">
-    Ein Kind aus Gary, Indiana, das mit sechs Jahren auf die Bühne stieg und mit 50 die Welt erschütterte. Ein Mann, der mit seiner Musik Grenzen zwischen Rassen, Nationen und Generationen einriss – und der gleichzeitig selbst an seiner eigenen Einsamkeit zerbrach. Ein Tänzer, dessen Moves die Welt nachahmte. Ein Sänger, dessen Stimme weinte, auch wenn die Melodie fröhlich war. Ein Mensch, der die Kindheit liebte, weil er seine eigene nie hatte.
-  </p>
-  <p style="font-size:.95rem;color:var(--text2);line-height:1.9;margin-bottom:40px">
-    Michael Jackson war nicht perfekt. Er lebte in Widersprüchen, war Ikone und Außenseiter zugleich, gefeiert und verfolgt. Aber was er der Welt hinterließ, ist unbestreitbar: eine Musik, die bewegt. Eine Botschaft, die bleibt. Ein Vermächtnis, das unsterblich ist.
-  </p>
-  <div class="closing-line"></div>
-  <div class="closing-dates">29. August 1958 &nbsp;–&nbsp; 25. Juni 2009</div>
-  <p style="font-size:.78rem;color:#444;letter-spacing:3px;text-transform:uppercase;margin-top:15px">King of Pop · Forever</p>
-</div>
-</section>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script>
-// Stars
-(function(){
-  const c=document.getElementById('stars');
-  for(let i=0;i<120;i++){
-    const s=document.createElement('div');
-    s.className='star';
-    const sz=Math.random()*2.5+0.5;
-    s.style.cssText=`width:${sz}px;height:${sz}px;top:${Math.random()*100}%;left:${Math.random()*100}%;--d:${Math.random()*3+1}s`;
-    c.appendChild(s);
-  }
-})();
+// ============================================================
+// WA NO SEKAI - Japanisches Minecraft-Spiel
+// ============================================================
 
-// Nav active on scroll
-const sections=document.querySelectorAll('section[id]');
-const links=document.querySelectorAll('.nav-links a');
-window.addEventListener('scroll',()=>{
-  let cur='';
-  sections.forEach(s=>{if(window.scrollY>=s.offsetTop-100)cur=s.id});
-  links.forEach(a=>{
-    a.classList.toggle('active',a.getAttribute('href')==='#'+cur);
+const canvas = document.getElementById('canvas');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.setClearColor(0x87CEEB);
+
+const scene = new THREE.Scene();
+scene.fog = new THREE.Fog(0xc8e8ff, 40, 120);
+
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.05, 200);
+
+// ============================================================
+// BLOCK-TYPEN (japanisches Thema)
+// ============================================================
+const BLOCKS = {
+  AIR:          0,
+  GRASS:        1,
+  DIRT:         2,
+  STONE:        3,
+  SAND:         4,
+  WATER:        5,
+  WOOD:         6,
+  LEAVES:       7,
+  CHERRY_WOOD:  8,
+  CHERRY_LEAF:  9,
+  BAMBOO:       10,
+  TATAMI:       11,
+  SHOJI:        12,
+  ROOF_TILE:    13,
+  LANTERN:      14,
+  SNOW:         15,
+  GRAVEL:       16,
+  MOSS_STONE:   17,
+  TORII_RED:    18,
+};
+
+const BLOCK_NAMES = {
+  [BLOCKS.GRASS]:       'Gras',
+  [BLOCKS.DIRT]:        'Erde',
+  [BLOCKS.STONE]:       'Stein',
+  [BLOCKS.SAND]:        'Sand',
+  [BLOCKS.WATER]:       'Wasser',
+  [BLOCKS.WOOD]:        'Zedernholz',
+  [BLOCKS.LEAVES]:      'Blaetter',
+  [BLOCKS.CHERRY_WOOD]: 'Kirschholz',
+  [BLOCKS.CHERRY_LEAF]: 'Kirschblueten',
+  [BLOCKS.BAMBOO]:      'Bambus',
+  [BLOCKS.TATAMI]:      'Tatami',
+  [BLOCKS.SHOJI]:       'Shoji-Wand',
+  [BLOCKS.ROOF_TILE]:   'Dachziegel',
+  [BLOCKS.LANTERN]:     'Laterne',
+  [BLOCKS.SNOW]:        'Schnee',
+  [BLOCKS.GRAVEL]:      'Kies',
+  [BLOCKS.MOSS_STONE]:  'Moostein',
+  [BLOCKS.TORII_RED]:   'Torii-Tor',
+};
+
+const BLOCK_COLORS = {
+  [BLOCKS.GRASS]:       [0x4a7c3f, 0x6b8c42, 0x5a9444],
+  [BLOCKS.DIRT]:        [0x7a5c3a, 0x8b6847, 0x6d4f2e],
+  [BLOCKS.STONE]:       [0x7a7a7a, 0x888888, 0x6d6d6d],
+  [BLOCKS.SAND]:        [0xd4b896, 0xc9a87a, 0xdfc9a6],
+  [BLOCKS.WATER]:       [0x3a85c7, 0x4a95d7, 0x2a75b7],
+  [BLOCKS.WOOD]:        [0x5c3d1e, 0x6b4a28, 0x4e3218],
+  [BLOCKS.LEAVES]:      [0x2d6a2d, 0x386e38, 0x255e25],
+  [BLOCKS.CHERRY_WOOD]: [0x7a3a2a, 0x8a4a3a, 0x6a2a1a],
+  [BLOCKS.CHERRY_LEAF]: [0xffb7c5, 0xffc8d3, 0xffa6b8],
+  [BLOCKS.BAMBOO]:      [0x6b8a3a, 0x7a9a48, 0x5c7a30],
+  [BLOCKS.TATAMI]:      [0xc8b97a, 0xd4c688, 0xbcad6c],
+  [BLOCKS.SHOJI]:       [0xf0ece0, 0xfaf6ea, 0xe8e4d8],
+  [BLOCKS.ROOF_TILE]:   [0x4a5a6a, 0x566878, 0x3e4e5e],
+  [BLOCKS.LANTERN]:     [0xffa040, 0xffb050, 0xff9030],
+  [BLOCKS.SNOW]:        [0xf5f5ff, 0xffffff, 0xeaeaf5],
+  [BLOCKS.GRAVEL]:      [0x8a8a7a, 0x9a9a8a, 0x7a7a6a],
+  [BLOCKS.MOSS_STONE]:  [0x556655, 0x647464, 0x486048],
+  [BLOCKS.TORII_RED]:   [0xc0392b, 0xd44030, 0xb03020],
+};
+
+const SOLID_BLOCKS = new Set([
+  BLOCKS.GRASS, BLOCKS.DIRT, BLOCKS.STONE, BLOCKS.SAND,
+  BLOCKS.WOOD, BLOCKS.LEAVES, BLOCKS.CHERRY_WOOD, BLOCKS.CHERRY_LEAF,
+  BLOCKS.BAMBOO, BLOCKS.TATAMI, BLOCKS.SHOJI, BLOCKS.ROOF_TILE,
+  BLOCKS.LANTERN, BLOCKS.SNOW, BLOCKS.GRAVEL, BLOCKS.MOSS_STONE, BLOCKS.TORII_RED
+]);
+
+// ============================================================
+// WELT-DATEN
+// ============================================================
+const CHUNK_SIZE = 16;
+const WORLD_HEIGHT = 32;
+const RENDER_DISTANCE = 4;
+
+const worldData = new Map();
+
+function chunkKey(cx, cz) { return cx + ',' + cz; }
+function blockIndex(lx, y, lz) { return (y * CHUNK_SIZE + lz) * CHUNK_SIZE + lx; }
+
+function getBlock(wx, wy, wz) {
+  if (wy < 0 || wy >= WORLD_HEIGHT) return wy < 0 ? BLOCKS.STONE : BLOCKS.AIR;
+  const cx = Math.floor(wx / CHUNK_SIZE);
+  const cz = Math.floor(wz / CHUNK_SIZE);
+  const chunk = worldData.get(chunkKey(cx, cz));
+  if (!chunk) return BLOCKS.AIR;
+  const lx = ((wx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+  const lz = ((wz % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+  return chunk[blockIndex(lx, wy, lz)];
+}
+
+function setBlock(wx, wy, wz, type) {
+  if (wy < 0 || wy >= WORLD_HEIGHT) return;
+  const cx = Math.floor(wx / CHUNK_SIZE);
+  const cz = Math.floor(wz / CHUNK_SIZE);
+  const key = chunkKey(cx, cz);
+  let chunk = worldData.get(key);
+  if (!chunk) { chunk = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE * WORLD_HEIGHT); worldData.set(key, chunk); }
+  const lx = ((wx % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+  const lz = ((wz % CHUNK_SIZE) + CHUNK_SIZE) % CHUNK_SIZE;
+  chunk[blockIndex(lx, wy, lz)] = type;
+}
+
+// ============================================================
+// RAUSCHEN / TERRAIN
+// ============================================================
+function hash(x, z, seed) {
+  let h = (x * 374761393 + z * 668265263 + seed * 2246822519) >>> 0;
+  h ^= h >>> 13; h = Math.imul(h, 1540483477); h ^= h >>> 15;
+  return (h >>> 0) / 0xffffffff;
+}
+
+function smoothNoise(x, z, seed) {
+  const ix = Math.floor(x), iz = Math.floor(z);
+  const fx = x - ix, fz = z - iz;
+  const ux = fx * fx * (3 - 2 * fx);
+  const uz = fz * fz * (3 - 2 * fz);
+  const a = hash(ix,   iz,   seed);
+  const b = hash(ix+1, iz,   seed);
+  const c = hash(ix,   iz+1, seed);
+  const d = hash(ix+1, iz+1, seed);
+  return a + (b-a)*ux + (c-a)*uz + (d-a+a-b-c+b)*ux*uz;
+}
+
+function fbm(x, z, seed) {
+  return smoothNoise(x*0.05,  z*0.05,  seed)     * 0.5
+       + smoothNoise(x*0.1,   z*0.1,   seed+1)   * 0.25
+       + smoothNoise(x*0.2,   z*0.2,   seed+2)   * 0.125
+       + smoothNoise(x*0.4,   z*0.4,   seed+3)   * 0.0625;
+}
+
+function getTerrainHeight(wx, wz) {
+  const n = fbm(wx, wz, 42);
+  return Math.floor(7 + Math.pow(n, 1.5) * 20);
+}
+
+function getBiome(wx, wz) {
+  const b = smoothNoise(wx * 0.03, wz * 0.03, 99);
+  if (b < 0.25) return 'bamboo';
+  if (b < 0.48) return 'cherry';
+  if (b < 0.68) return 'forest';
+  if (b < 0.82) return 'mountain';
+  return 'coastal';
+}
+
+// ============================================================
+// CHUNK-GENERIERUNG
+// ============================================================
+function generateChunk(cx, cz) {
+  const key = chunkKey(cx, cz);
+  if (worldData.has(key)) return;
+  const chunk = new Uint8Array(CHUNK_SIZE * CHUNK_SIZE * WORLD_HEIGHT);
+  worldData.set(key, chunk);
+
+  const SEA_LEVEL = 9;
+
+  for (let lx = 0; lx < CHUNK_SIZE; lx++) {
+    for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+      const wx = cx * CHUNK_SIZE + lx;
+      const wz = cz * CHUNK_SIZE + lz;
+      const h = getTerrainHeight(wx, wz);
+      const biome = getBiome(wx, wz);
+
+      for (let y = 0; y < WORLD_HEIGHT; y++) {
+        let block = BLOCKS.AIR;
+        if (y === 0) {
+          block = BLOCKS.STONE;
+        } else if (y < h - 4) {
+          block = BLOCKS.STONE;
+          if (hash(wx, y + wz * 7, 11) > 0.85) block = BLOCKS.GRAVEL;
+          if (hash(wx * 2, y * 3, wz + 22) > 0.88) block = BLOCKS.MOSS_STONE;
+        } else if (y < h - 1) {
+          block = BLOCKS.DIRT;
+        } else if (y === h - 1) {
+          if (h <= SEA_LEVEL) {
+            block = BLOCKS.SAND;
+          } else if (biome === 'mountain' && h > 22) {
+            block = BLOCKS.SNOW;
+          } else if (biome === 'coastal') {
+            block = BLOCKS.SAND;
+          } else {
+            block = BLOCKS.GRASS;
+          }
+        } else if (y < SEA_LEVEL && h <= SEA_LEVEL) {
+          block = BLOCKS.WATER;
+        }
+        chunk[blockIndex(lx, y, lz)] = block;
+      }
+    }
+  }
+
+  // Baume und Strukturen
+  for (let lx = 0; lx < CHUNK_SIZE; lx++) {
+    for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+      const wx = cx * CHUNK_SIZE + lx;
+      const wz = cz * CHUNK_SIZE + lz;
+      const h = getTerrainHeight(wx, wz);
+      if (h <= 9) continue;
+      const biome = getBiome(wx, wz);
+      const r = hash(wx, wz, 55);
+      const r2 = hash(wx + 100, wz + 200, 77);
+
+      if (biome === 'cherry' && r > 0.84) {
+        placeCherryTree(wx, h, wz);
+      } else if (biome === 'bamboo' && r > 0.70) {
+        placeBamboo(wx, h, wz);
+      } else if (biome === 'forest' && r > 0.83) {
+        placeCedarTree(wx, h, wz);
+      } else if (biome === 'mountain' && h > 19 && r > 0.90) {
+        placePineTree(wx, h, wz);
+      }
+
+      // Heiligtum (sehr selten)
+      if (r2 > 0.975 && biome !== 'coastal' && h > 10 &&
+          lx >= 4 && lx <= CHUNK_SIZE - 6 && lz >= 4 && lz <= CHUNK_SIZE - 6) {
+        placeShrine(wx - 2, h, wz - 2);
+      }
+    }
+  }
+}
+
+function placeCherryTree(wx, gy, wz) {
+  const th = 3 + Math.floor(hash(wx, wz, 1) * 3);
+  for (let y = 0; y < th; y++) setBlock(wx, gy + y, wz, BLOCKS.CHERRY_WOOD);
+  const top = gy + th;
+  for (let dx = -3; dx <= 3; dx++) {
+    for (let dz = -3; dz <= 3; dz++) {
+      for (let dy = -1; dy <= 2; dy++) {
+        const d = Math.abs(dx) + Math.abs(dz) + Math.abs(dy) * 0.5;
+        if (d < 3.8 && !(dx === 0 && dz === 0 && dy <= 0)) {
+          if (getBlock(wx+dx, top+dy, wz+dz) === BLOCKS.AIR)
+            setBlock(wx+dx, top+dy, wz+dz, BLOCKS.CHERRY_LEAF);
+        }
+      }
+    }
+  }
+}
+
+function placeBamboo(wx, gy, wz) {
+  const h = 4 + Math.floor(hash(wx * 3, wz * 3, 2) * 5);
+  for (let y = 0; y < h; y++) setBlock(wx, gy + y, wz, BLOCKS.BAMBOO);
+  for (let dx = -1; dx <= 1; dx++) {
+    for (let dz = -1; dz <= 1; dz++) {
+      if (dx === 0 && dz === 0) continue;
+      if (hash(wx + dx, wz + dz, 33) > 0.4)
+        setBlock(wx+dx, gy+h-1, wz+dz, BLOCKS.LEAVES);
+    }
+  }
+}
+
+function placeCedarTree(wx, gy, wz) {
+  const h = 5 + Math.floor(hash(wx, wz, 3) * 4);
+  for (let y = 0; y < h; y++) setBlock(wx, gy + y, wz, BLOCKS.WOOD);
+  for (let layer = 0; layer < 4; layer++) {
+    const r = 3 - layer;
+    const ly = gy + Math.floor(h * 0.35) + layer * 2;
+    for (let dx = -r; dx <= r; dx++) {
+      for (let dz = -r; dz <= r; dz++) {
+        if (Math.abs(dx) + Math.abs(dz) <= r + 1 && getBlock(wx+dx,ly,wz+dz) === BLOCKS.AIR)
+          setBlock(wx+dx, ly, wz+dz, BLOCKS.LEAVES);
+      }
+    }
+  }
+}
+
+function placePineTree(wx, gy, wz) {
+  const h = 4 + Math.floor(hash(wx, wz, 4) * 3);
+  for (let y = 0; y < h; y++) setBlock(wx, gy + y, wz, BLOCKS.WOOD);
+  for (let layer = 0; layer < 3; layer++) {
+    const r = 2 - layer;
+    const ly = gy + Math.floor(h * 0.5) + layer;
+    for (let dx = -r; dx <= r; dx++) {
+      for (let dz = -r; dz <= r; dz++) {
+        if (getBlock(wx+dx, ly, wz+dz) === BLOCKS.AIR)
+          setBlock(wx+dx, ly, wz+dz, BLOCKS.LEAVES);
+      }
+    }
+  }
+  setBlock(wx, gy + h, wz, BLOCKS.LEAVES);
+}
+
+function placeShrine(wx, gy, wz) {
+  const y = gy;
+  for (let dx = 0; dx < 5; dx++)
+    for (let dz = 0; dz < 5; dz++)
+      setBlock(wx+dx, y, wz+dz, BLOCKS.TATAMI);
+  for (let dx = 0; dx < 5; dx++) {
+    for (let h = 1; h <= 2; h++) {
+      setBlock(wx+dx, y+h, wz,   BLOCKS.SHOJI);
+      setBlock(wx+dx, y+h, wz+4, BLOCKS.SHOJI);
+    }
+  }
+  for (let dz = 1; dz < 4; dz++) {
+    for (let h = 1; h <= 2; h++) {
+      setBlock(wx,   y+h, wz+dz, BLOCKS.SHOJI);
+      setBlock(wx+4, y+h, wz+dz, BLOCKS.SHOJI);
+    }
+  }
+  for (let dx = 0; dx < 5; dx++)
+    for (let dz = 0; dz < 5; dz++)
+      setBlock(wx+dx, y+3, wz+dz, BLOCKS.ROOF_TILE);
+  setBlock(wx+2, y+1, wz+2, BLOCKS.LANTERN);
+  // Torii davor
+  setBlock(wx+1, y+1, wz-2, BLOCKS.TORII_RED);
+  setBlock(wx+3, y+1, wz-2, BLOCKS.TORII_RED);
+  setBlock(wx+1, y+2, wz-2, BLOCKS.TORII_RED);
+  setBlock(wx+3, y+2, wz-2, BLOCKS.TORII_RED);
+  for (let dx = 0; dx < 5; dx++) setBlock(wx+dx, y+3, wz-2, BLOCKS.TORII_RED);
+}
+
+// ============================================================
+// MESH-GENERIERUNG
+// ============================================================
+const chunkMeshes = new Map();
+const blockMaterials = {};
+
+function getBlockMat(type, face) {
+  const key = type + '_' + face;
+  if (blockMaterials[key]) return blockMaterials[key];
+  const colors = BLOCK_COLORS[type];
+  if (!colors) return null;
+  const idx = face === 'top' ? 1 : face === 'bottom' ? 2 : 0;
+  const mat = new THREE.MeshLambertMaterial({
+    color: colors[idx],
+    transparent: type === BLOCKS.WATER || type === BLOCKS.SHOJI || type === BLOCKS.CHERRY_LEAF,
+    opacity: type === BLOCKS.WATER ? 0.72 : type === BLOCKS.SHOJI ? 0.8 : type === BLOCKS.CHERRY_LEAF ? 0.92 : 1,
   });
-},{ passive:true });
+  if (type === BLOCKS.LANTERN) {
+    mat.emissive = new THREE.Color(0xff8800);
+    mat.emissiveIntensity = 0.6;
+  }
+  blockMaterials[key] = mat;
+  return mat;
+}
+
+const FACE_DEF = [
+  { dir:[0,1,0],  name:'top',    corners:[[0,1,0],[1,1,0],[0,1,1],[1,1,1]] },
+  { dir:[0,-1,0], name:'bottom', corners:[[1,0,0],[0,0,0],[1,0,1],[0,0,1]] },
+  { dir:[1,0,0],  name:'side',   corners:[[1,0,0],[1,1,0],[1,0,1],[1,1,1]] },
+  { dir:[-1,0,0], name:'side',   corners:[[0,0,1],[0,1,1],[0,0,0],[0,1,0]] },
+  { dir:[0,0,1],  name:'side',   corners:[[0,0,1],[1,0,1],[0,1,1],[1,1,1]] },
+  { dir:[0,0,-1], name:'side',   corners:[[1,0,0],[0,0,0],[1,1,0],[0,1,0]] },
+];
+
+function buildChunkMesh(cx, cz) {
+  const old = chunkMeshes.get(chunkKey(cx, cz));
+  if (old) old.forEach(m => { scene.remove(m); m.geometry.dispose(); });
+
+  const groups = {};
+  for (let lx = 0; lx < CHUNK_SIZE; lx++) {
+    for (let y = 0; y < WORLD_HEIGHT; y++) {
+      for (let lz = 0; lz < CHUNK_SIZE; lz++) {
+        const wx = cx * CHUNK_SIZE + lx;
+        const wz = cz * CHUNK_SIZE + lz;
+        const block = getBlock(wx, y, wz);
+        if (!block) continue;
+        for (const f of FACE_DEF) {
+          const nb = getBlock(wx+f.dir[0], y+f.dir[1], wz+f.dir[2]);
+          const nbTrans = !SOLID_BLOCKS.has(nb) || nb === BLOCKS.WATER || nb === BLOCKS.CHERRY_LEAF || nb === BLOCKS.SHOJI;
+          if (nb === BLOCKS.AIR || (nbTrans && nb !== block)) {
+            const mat = getBlockMat(block, f.name);
+            if (!mat) continue;
+            const gk = block + '_' + f.name;
+            if (!groups[gk]) groups[gk] = { mat, pos: [], norm: [], idx: [] };
+            const g = groups[gk];
+            const base = g.pos.length / 3;
+            for (const [dx,dy,dz] of f.corners) {
+              g.pos.push(wx+dx, y+dy, wz+dz);
+              g.norm.push(...f.dir);
+            }
+            g.idx.push(base,base+1,base+2, base+2,base+1,base+3);
+          }
+        }
+      }
+    }
+  }
+
+  const meshes = [];
+  for (const gk in groups) {
+    const g = groups[gk];
+    if (!g.pos.length) continue;
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(g.pos, 3));
+    geo.setAttribute('normal',   new THREE.Float32BufferAttribute(g.norm, 3));
+    geo.setIndex(g.idx);
+    const m = new THREE.Mesh(geo, g.mat);
+    m.receiveShadow = true;
+    scene.add(m);
+    meshes.push(m);
+  }
+  chunkMeshes.set(chunkKey(cx, cz), meshes);
+}
+
+// ============================================================
+// BELEUCHTUNG
+// ============================================================
+scene.add(new THREE.AmbientLight(0xffeedd, 0.6));
+
+const sunLight = new THREE.DirectionalLight(0xfff5e0, 1.2);
+sunLight.position.set(60, 80, 40);
+sunLight.castShadow = true;
+sunLight.shadow.mapSize.set(2048, 2048);
+sunLight.shadow.camera.near = 0.5;
+sunLight.shadow.camera.far = 200;
+sunLight.shadow.camera.left = -80;
+sunLight.shadow.camera.right = 80;
+sunLight.shadow.camera.top = 80;
+sunLight.shadow.camera.bottom = -80;
+scene.add(sunLight);
+scene.add(new THREE.DirectionalLight(0xaaccff, 0.3).position.set(-30, 20, -40) && new THREE.DirectionalLight(0xaaccff, 0.3));
+
+// ============================================================
+// SPIELER
+// ============================================================
+const player = {
+  pos: new THREE.Vector3(8, 20, 8),
+  vel: new THREE.Vector3(),
+  yaw: 0, pitch: 0,
+  onGround: false,
+  height: 1.7,
+  radius: 0.3,
+};
+
+const keys = {};
+let paused = false, started = false;
+let lastTime = performance.now();
+let frameCount = 0, fpsAccum = 0, fps = 0;
+
+function isSolid(x, y, z) {
+  const b = getBlock(Math.floor(x), Math.floor(y), Math.floor(z));
+  return SOLID_BLOCKS.has(b) && b !== BLOCKS.WATER;
+}
+
+function movePlayer(dt) {
+  if (!player.onGround) player.vel.y -= 20 * dt;
+  else if (player.vel.y < 0) player.vel.y = 0;
+
+  const aabb = () => ({
+    minX: player.pos.x - player.radius, maxX: player.pos.x + player.radius,
+    minY: player.pos.y - player.height,  maxY: player.pos.y + 0.1,
+    minZ: player.pos.z - player.radius,  maxZ: player.pos.z + player.radius,
+  });
+
+  function resolveAxis(axis, velAxis, plus, minus) {
+    player.pos[axis] += player.vel[axis] * dt;
+    const b = aabb();
+    for (let bx = Math.floor(b.minX); bx <= Math.floor(b.maxX); bx++) {
+      for (let by = Math.floor(b.minY); by <= Math.floor(b.maxY); by++) {
+        for (let bz = Math.floor(b.minZ); bz <= Math.floor(b.maxZ); bz++) {
+          if (isSolid(bx, by, bz)) {
+            if (player.vel[axis] > 0) player.pos[axis] = (axis === 'x' ? bx : axis === 'y' ? by + 1 + player.height : bz) - (axis === 'x' ? player.radius + 0.001 : axis === 'y' ? 0 : player.radius + 0.001);
+            else player.pos[axis] = (axis === 'x' ? bx + 1 + player.radius : axis === 'y' ? by - 0.1 - 0.001 : bz + 1 + player.radius) + (axis === 'y' ? 0 : 0.001);
+            if (axis === 'y' && player.vel.y < 0) player.onGround = true;
+            player.vel[axis] = 0;
+          }
+        }
+      }
+    }
+  }
+
+  player.onGround = false;
+  resolveAxis('x');
+  resolveAxis('y');
+  resolveAxis('z');
+}
+
+// Vereinfachte Kollision
+function resolveCollision(dt) {
+  if (!player.onGround) player.vel.y -= 20 * dt;
+  else if (player.vel.y < 0) player.vel.y = 0;
+
+  player.pos.x += player.vel.x * dt;
+  let b = getBounds();
+  for (let bx = b.x0; bx <= b.x1; bx++) for (let by = b.y0; by <= b.y1; by++) for (let bz = b.z0; bz <= b.z1; bz++) {
+    if (isSolid(bx,by,bz)) { player.vel.x > 0 ? (player.pos.x = bx - player.radius - 0.001) : (player.pos.x = bx + 1 + player.radius + 0.001); player.vel.x = 0; }
+  }
+
+  player.onGround = false;
+  player.pos.y += player.vel.y * dt;
+  b = getBounds();
+  for (let bx = b.x0; bx <= b.x1; bx++) for (let by = b.y0; by <= b.y1; by++) for (let bz = b.z0; bz <= b.z1; bz++) {
+    if (isSolid(bx,by,bz)) {
+      if (player.vel.y < 0) { player.pos.y = by + 1 + player.height; player.onGround = true; }
+      else { player.pos.y = by - 0.1 - 0.001; }
+      player.vel.y = 0;
+    }
+  }
+
+  player.pos.z += player.vel.z * dt;
+  b = getBounds();
+  for (let bx = b.x0; bx <= b.x1; bx++) for (let by = b.y0; by <= b.y1; by++) for (let bz = b.z0; bz <= b.z1; bz++) {
+    if (isSolid(bx,by,bz)) { player.vel.z > 0 ? (player.pos.z = bz - player.radius - 0.001) : (player.pos.z = bz + 1 + player.radius + 0.001); player.vel.z = 0; }
+  }
+}
+
+function getBounds() {
+  return {
+    x0: Math.floor(player.pos.x - player.radius), x1: Math.floor(player.pos.x + player.radius),
+    y0: Math.floor(player.pos.y - player.height),  y1: Math.floor(player.pos.y + 0.1),
+    z0: Math.floor(player.pos.z - player.radius),  z1: Math.floor(player.pos.z + player.radius),
+  };
+}
+
+// ============================================================
+// RAYCAST
+// ============================================================
+function raycast(maxDist = 6) {
+  const dx = Math.cos(player.pitch) * Math.sin(player.yaw);
+  const dy = Math.sin(player.pitch);
+  const dz = Math.cos(player.pitch) * Math.cos(player.yaw);
+  let ox = player.pos.x, oy = player.pos.y - 0.3, oz = player.pos.z;
+  let px = ox, py = oy, pz = oz;
+  for (let i = 0; i < maxDist * 20; i++) {
+    ox += dx * 0.05; oy += dy * 0.05; oz += dz * 0.05;
+    const bx = Math.floor(ox), by = Math.floor(oy), bz = Math.floor(oz);
+    const b = getBlock(bx, by, bz);
+    if (b && SOLID_BLOCKS.has(b)) return { hit: new THREE.Vector3(bx,by,bz), prev: new THREE.Vector3(Math.floor(px),Math.floor(py),Math.floor(pz)), block: b };
+    px = ox; py = oy; pz = oz;
+  }
+  return null;
+}
+
+// ============================================================
+// AUSWAHL-HIGHLIGHT
+// ============================================================
+const selGeo = new THREE.BoxGeometry(1.02,1.02,1.02);
+const selMat = new THREE.MeshBasicMaterial({ color:0x000000, wireframe:true, transparent:true, opacity:0.5 });
+const selMesh = new THREE.Mesh(selGeo, selMat);
+selMesh.visible = false;
+scene.add(selMesh);
+
+// ============================================================
+// INVENTAR
+// ============================================================
+const INVENTORY = [
+  BLOCKS.GRASS, BLOCKS.DIRT, BLOCKS.STONE,
+  BLOCKS.CHERRY_WOOD, BLOCKS.CHERRY_LEAF,
+  BLOCKS.BAMBOO, BLOCKS.TATAMI, BLOCKS.SHOJI,
+  BLOCKS.ROOF_TILE,
+];
+let selectedSlot = 0;
+
+function buildHotbar() {
+  const hb = document.getElementById('hotbar');
+  hb.innerHTML = '';
+  INVENTORY.forEach((block, i) => {
+    const slot = document.createElement('div');
+    slot.className = 'slot' + (i === selectedSlot ? ' active' : '');
+    const icon = document.createElement('div');
+    icon.className = 'slot-icon';
+    const c = BLOCK_COLORS[block];
+    icon.style.background = c ? '#' + c[0].toString(16).padStart(6,'0') : '#555';
+    icon.style.border = '1px solid rgba(0,0,0,0.3)';
+    const num = document.createElement('span');
+    num.className = 'slot-num';
+    num.textContent = i + 1;
+    const name = document.createElement('span');
+    name.className = 'slot-name';
+    name.textContent = BLOCK_NAMES[block] || '';
+    slot.appendChild(icon); slot.appendChild(num); slot.appendChild(name);
+    slot.addEventListener('click', () => { selectedSlot = i; buildHotbar(); });
+    hb.appendChild(slot);
+  });
+}
+
+// ============================================================
+// CHUNK-VERWALTUNG
+// ============================================================
+const loadedChunks = new Set();
+
+function updateChunks() {
+  const pcx = Math.floor(player.pos.x / CHUNK_SIZE);
+  const pcz = Math.floor(player.pos.z / CHUNK_SIZE);
+  const needed = new Set();
+  for (let dx = -RENDER_DISTANCE; dx <= RENDER_DISTANCE; dx++) {
+    for (let dz = -RENDER_DISTANCE; dz <= RENDER_DISTANCE; dz++) {
+      if (dx*dx + dz*dz > RENDER_DISTANCE*RENDER_DISTANCE) continue;
+      const cx = pcx+dx, cz = pcz+dz;
+      const k = chunkKey(cx, cz);
+      needed.add(k);
+      if (!loadedChunks.has(k)) {
+        generateChunk(cx, cz);
+        buildChunkMesh(cx, cz);
+        loadedChunks.add(k);
+      }
+    }
+  }
+  for (const k of loadedChunks) {
+    if (!needed.has(k)) {
+      const ms = chunkMeshes.get(k);
+      if (ms) { ms.forEach(m => { scene.remove(m); m.geometry.dispose(); }); chunkMeshes.delete(k); }
+      loadedChunks.delete(k);
+    }
+  }
+}
+
+function rebuildAround(wx, wz) {
+  const cx = Math.floor(wx / CHUNK_SIZE);
+  const cz = Math.floor(wz / CHUNK_SIZE);
+  for (let dx = -1; dx <= 1; dx++)
+    for (let dz = -1; dz <= 1; dz++)
+      buildChunkMesh(cx+dx, cz+dz);
+}
+
+// ============================================================
+// STEUERUNG
+// ============================================================
+document.addEventListener('keydown', e => { keys[e.code] = true; });
+document.addEventListener('keyup',   e => { keys[e.code] = false; });
+
+document.addEventListener('keydown', e => {
+  if (!started) return;
+  if (e.code === 'Escape') {
+    paused = !paused;
+    document.getElementById('pause').style.display = paused ? 'flex' : 'none';
+    if (!paused) canvas.requestPointerLock();
+    else document.exitPointerLock();
+  }
+  const n = parseInt(e.key);
+  if (n >= 1 && n <= 9 && n <= INVENTORY.length) {
+    selectedSlot = n - 1;
+    buildHotbar();
+    document.getElementById('selected-block').textContent = 'Block: ' + BLOCK_NAMES[INVENTORY[selectedSlot]];
+  }
+});
+
+document.addEventListener('mousemove', e => {
+  if (!started || paused || !document.pointerLockElement) return;
+  player.yaw   -= e.movementX * 0.002;
+  player.pitch -= e.movementY * 0.002;
+  player.pitch  = Math.max(-Math.PI/2+0.01, Math.min(Math.PI/2-0.01, player.pitch));
+});
+
+document.addEventListener('mousedown', e => {
+  if (!started || paused || !document.pointerLockElement) return;
+  const r = raycast();
+  if (!r) return;
+  if (e.button === 0) {
+    setBlock(r.hit.x, r.hit.y, r.hit.z, BLOCKS.AIR);
+    rebuildAround(r.hit.x, r.hit.z);
+  } else if (e.button === 2) {
+    const b = getBounds();
+    const px = r.prev.x, py = r.prev.y, pz = r.prev.z;
+    const inPlayer = px >= b.x0 && px <= b.x1 && py >= b.y0 && py <= b.y1 && pz >= b.z0 && pz <= b.z1;
+    if (!inPlayer) {
+      setBlock(px, py, pz, INVENTORY[selectedSlot]);
+      rebuildAround(px, pz);
+    }
+  }
+});
+
+document.addEventListener('contextmenu', e => e.preventDefault());
+
+document.addEventListener('wheel', e => {
+  if (!started || paused) return;
+  selectedSlot = ((selectedSlot + (e.deltaY > 0 ? 1 : -1)) + INVENTORY.length) % INVENTORY.length;
+  buildHotbar();
+  document.getElementById('selected-block').textContent = 'Block: ' + BLOCK_NAMES[INVENTORY[selectedSlot]];
+}, { passive: true });
+
+canvas.addEventListener('click', () => { if (started && !paused) canvas.requestPointerLock(); });
+
+// ============================================================
+// HIMMEL
+// ============================================================
+const skyMesh = new THREE.Mesh(
+  new THREE.SphereGeometry(150, 16, 8),
+  new THREE.ShaderMaterial({
+    side: THREE.BackSide,
+    uniforms: {
+      topColor:    { value: new THREE.Color(0x4488cc) },
+      bottomColor: { value: new THREE.Color(0xaaddff) },
+    },
+    vertexShader:   `varying vec3 vP; void main(){vP=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+    fragmentShader: `varying vec3 vP;uniform vec3 topColor,bottomColor;void main(){float t=clamp((vP.y+50.)/150.,0.,1.);gl_FragColor=vec4(mix(bottomColor,topColor,t),1.);}`,
+  })
+);
+scene.add(skyMesh);
+
+// ============================================================
+// WOLKEN
+// ============================================================
+const clouds = [];
+for (let i = 0; i < 18; i++) {
+  const geo = new THREE.BoxGeometry(4+Math.random()*6, 1+Math.random(), 3+Math.random()*4);
+  const mat = new THREE.MeshLambertMaterial({ color:0xffffff, transparent:true, opacity:0.82 });
+  const m = new THREE.Mesh(geo, mat);
+  m.position.set((Math.random()-0.5)*200, 30+Math.random()*10, (Math.random()-0.5)*200);
+  scene.add(m); clouds.push(m);
+}
+
+// ============================================================
+// START
+// ============================================================
+function startGame() {
+  document.getElementById('overlay').style.display = 'none';
+  started = true;
+  buildHotbar();
+
+  // Initial-Chunks generieren
+  for (let dx = -RENDER_DISTANCE; dx <= RENDER_DISTANCE; dx++)
+    for (let dz = -RENDER_DISTANCE; dz <= RENDER_DISTANCE; dz++)
+      if (dx*dx + dz*dz <= RENDER_DISTANCE*RENDER_DISTANCE)
+        generateChunk(dx, dz);
+
+  for (let dx = -RENDER_DISTANCE; dx <= RENDER_DISTANCE; dx++)
+    for (let dz = -RENDER_DISTANCE; dz <= RENDER_DISTANCE; dz++)
+      if (dx*dx + dz*dz <= RENDER_DISTANCE*RENDER_DISTANCE) {
+        buildChunkMesh(dx, dz);
+        loadedChunks.add(chunkKey(dx, dz));
+      }
+
+  const sh = getTerrainHeight(8, 8);
+  player.pos.set(8.5, sh + 3, 8.5);
+  canvas.requestPointerLock();
+  requestAnimationFrame(loop);
+}
+
+document.getElementById('startBtn').addEventListener('click', startGame);
+
+// ============================================================
+// GAME LOOP
+// ============================================================
+let chunkTimer = 0;
+
+function loop(now) {
+  requestAnimationFrame(loop);
+  const dt = Math.min((now - lastTime) / 1000, 0.05);
+  lastTime = now;
+
+  frameCount++; fpsAccum += dt;
+  if (fpsAccum >= 0.5) { fps = Math.round(frameCount / fpsAccum); frameCount = 0; fpsAccum = 0; }
+
+  if (!started || paused) { renderer.render(scene, camera); return; }
+
+  // Spielerbewegung
+  const speed = (keys['ShiftLeft'] || keys['ShiftRight']) ? 9 : 5;
+  const sy = Math.sin(player.yaw), cy = Math.cos(player.yaw);
+  player.vel.x = 0; player.vel.z = 0;
+  if (keys['KeyW']) { player.vel.x += sy*speed; player.vel.z += cy*speed; }
+  if (keys['KeyS']) { player.vel.x -= sy*speed; player.vel.z -= cy*speed; }
+  if (keys['KeyA']) { player.vel.x += cy*speed; player.vel.z -= sy*speed; }
+  if (keys['KeyD']) { player.vel.x -= cy*speed; player.vel.z += sy*speed; }
+  if (keys['Space'] && player.onGround) player.vel.y = 8;
+
+  resolveCollision(dt);
+
+  camera.position.copy(player.pos);
+  camera.rotation.order = 'YXZ';
+  camera.rotation.y = player.yaw;
+  camera.rotation.x = player.pitch;
+
+  // Auswahl
+  const hit = raycast();
+  if (hit) {
+    selMesh.visible = true;
+    selMesh.position.set(hit.hit.x+0.5, hit.hit.y+0.5, hit.hit.z+0.5);
+    const bi = document.getElementById('block-info');
+    bi.textContent = BLOCK_NAMES[hit.block] || '';
+    bi.style.opacity = '1';
+  } else {
+    selMesh.visible = false;
+    document.getElementById('block-info').style.opacity = '0';
+  }
+
+  // Wolken
+  clouds.forEach(c => { c.position.x += 0.4*dt; if (c.position.x > 110) c.position.x = -110; });
+
+  // Tageszyklus
+  const t = now * 0.00003;
+  sunLight.position.set(Math.sin(t)*80, Math.cos(t)*80+10, 40);
+  const day = Math.max(0, Math.cos(t));
+  sunLight.intensity = 0.4 + day * 1.0;
+  scene.fog.color.set(new THREE.Color(0x334466).lerp(new THREE.Color(0xc8e8ff), day));
+  renderer.setClearColor(new THREE.Color(0x111122).lerp(new THREE.Color(0x87CEEB), day));
+
+  // Chunks
+  chunkTimer += dt;
+  if (chunkTimer > 0.5) { chunkTimer = 0; updateChunks(); }
+
+  // HUD
+  document.getElementById('pos').textContent =
+    `X:${Math.floor(player.pos.x)} Y:${Math.floor(player.pos.y)} Z:${Math.floor(player.pos.z)}`;
+  document.getElementById('fps').textContent = `FPS: ${fps}`;
+
+  renderer.render(scene, camera);
+}
+
+window.addEventListener('resize', () => {
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+});
+
+buildHotbar();
 </script>
 </body>
 </html>
